@@ -10,7 +10,7 @@ import shutil
 import subprocess as sub
 
 class SolverConfiguration:
-    def __init__(self, selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments, hostname, user, password, databaseName):
+    def __init__(self, selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments):
         self.selectionPerSegment = selectionPerSegment
         self.nbQer = nbQer
         self.segmentDuration = segmentDuration
@@ -31,10 +31,6 @@ class SolverConfiguration:
         self.pathToTracesHash = pathToTracesHash
         self.pathToPrecomputedIntersection = pathToPrecomputedIntersection
         self.pathToPrecomputedSegments = pathToPrecomputedSegments
-        self.hostname = hostname
-        self.user = user
-        self.password = password
-        self.databaseName = databaseName
 
     def GetConfigurationStr(self):
         s =  '[Global]\n'
@@ -57,11 +53,6 @@ class SolverConfiguration:
         s += 'pathToTraces={}\n'.format(self.pathToTraces)
         s += 'pathToPrecomputedIntersection={}\n'.format(self.pathToPrecomputedIntersection)
         s += 'pathToPrecomputedSegments={}\n'.format(self.pathToPrecomputedSegments)
-        s += '[MySql]\n'
-        s += 'hostname={}\n'.format(self.hostname)
-        s += 'user={}\n'.format(self.user)
-        s += 'password={}\n'.format(self.password)
-        s += 'databaseName={}\n'.format(self.databaseName)
         return s
 
     def SolutionId(self):
@@ -130,7 +121,7 @@ if __name__ == '__main__':
                                 pathToTracesHash = config['ManagerConfig']['pathToTracesHash']
                                 pathToPrecomputedIntersection = config['ManagerConfig']['pathToPrecomputedIntersection']
                                 pathToPrecomputedSegments =  config['ManagerConfig']['pathToPrecomputedSegments']
-                                solverConfig = SolverConfiguration(selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments, config['MySql']['hostname'], config['MySql']['user'], config['MySql']['password'], config['MySql']['databaseName'])
+                                solverConfig = SolverConfiguration(selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments)
                                 with open('/tmp/tmpSolverConfig.ini', 'w') as o:
                                     o.write(solverConfig.GetConfigurationStr())
                                 sub.call([config['ManagerConfig']['pathToPreprocessing'], '-c', '/tmp/tmpSolverConfig.ini'])
