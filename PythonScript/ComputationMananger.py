@@ -177,7 +177,7 @@ if __name__ == '__main__':
                                         postprocessingO.write(solverConfig.PostprocessingOutputLineId()+' '+line)
     sub.call(['pdfunite']+listOfOutputPdf+['{}/mergedPlots.pdf'.format(outputDir)])
 
-    with open('{}/{}'.format(outputDir, 'globalPercentile.txt') as o:
+    with open('{}/{}'.format(outputDir, 'globalPercentile.txt'), 'w') as o:
         o.write('cdf opti heuri random\n')
         for i in range(0,101):
             opti = np.percentile(optiRawQualities, i)
