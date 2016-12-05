@@ -43,6 +43,7 @@ class SolverConfiguration:
         s += 'minSurfaceBitrate={}\n'.format(self.minSurfaceBitrate)
         s += 'maxSurfaceBitrate={}\n'.format(self.maxSurfaceBitrate)
         s += 'minSegQuality={}\n'.format(self.minSegQuality)
+        s += 'bitrateRatio={}\n'.format(self.bitrateRatio)
         s += 'nbTheta={}\n'.format(self.nbTheta)
         s += 'nbPhi={}\n'.format(self.nbPhi)
         s += 'nbHDim={}\n'.format(self.nbHDim)
