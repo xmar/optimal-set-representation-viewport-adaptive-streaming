@@ -12,13 +12,14 @@ import shutil
 import subprocess as sub
 
 class SolverConfiguration:
-    def __init__(self, selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments):
+    def __init__(self, selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, bitrateRatio, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments):
         self.selectionPerSegment = selectionPerSegment
         self.nbQer = nbQer
         self.segmentDuration = segmentDuration
         self.minSurfaceBitrate = minSurfaceBitrate
         self.maxSurfaceBitrate = maxSurfaceBitrate
         self.minSegQuality = minSegQuality
+        self.bitrateRatio = bitrateRatio
         self.nbTheta = nbTheta
         self.nbPhi = nbPhi
         self.nbHDim = nbHDim
@@ -58,7 +59,7 @@ class SolverConfiguration:
         return s
 
     def SolutionId(self):
-        return '{}_{:.6f}_{:.6f}_{:.6f}_{:.6f}'.format(self.nbQer, float(self.segmentDuration), float(self.minSegQuality), float(self.minSurfaceBitrate), float(self.maxSurfaceBitrate))
+        return '{}_{:.6f}_{:.6f}_{:.6f}_{:.6f}_{:.6f}'.format(self.nbQer, float(self.segmentDuration), float(self.minSegQuality), float(self.minSurfaceBitrate), float(self.maxSurfaceBitrate), float(self.bitrateRatio))
     def OutputDirId(self):
         return '{:.6f}_{}_{}_{:.6f}_{:.6f}_{}_{}_{}_{}_{}_{:.6f}_{:.6f}_{}'.format(float(self.segmentDuration), self.nbTheta, self.nbPhi, float(self.dimMin), float(self.dimMax), self.nbHDim, self.nbVDim, self.nbHPixels, self.nbVPixels, self.nbHPixels, float(self.viewportHAngle)*math.pi/180, float(self.viewportVAngle)*math.pi/180, self.pathToTracesHash)
     def OutputDir(self):
@@ -119,7 +120,7 @@ def PrintCdfLatex(solverConfig):
 \\begin{document}
 \\begin{figure}
  \\section{ Segment size: """+str(solverConfig.segmentDuration)+""" s; nbTheta = """+str(solverConfig.nbTheta)+""";
- nbPhi = """+str(solverConfig.nbPhi)+""" nbHdim = """+str(solverConfig.nbHDim)+""" ; nbVdim = """+str(solverConfig.nbVDim)+""" ; dimMin= """+str(solverConfig.dimMin)+""" ; dimMax = """+str(solverConfig.dimMax)+""" ; bMin = """+str(solverConfig.minSurfaceBitrate)+""" ; bMax = """+str(solverConfig.maxSurfaceBitrate)+""" ; segmentQualityMin = """+str(solverConfig.segmentDuration)+""" ;}
+ nbPhi = """+str(solverConfig.nbPhi)+""" nbHdim = """+str(solverConfig.nbHDim)+""" ; nbVdim = """+str(solverConfig.nbVDim)+""" ; dimMin= """+str(solverConfig.dimMin)+""" ; dimMax = """+str(solverConfig.dimMax)+""" ; bMin = """+str(solverConfig.minSurfaceBitrate)+""" ; bMax = """+str(solverConfig.maxSurfaceBitrate)+""" ; Rb = """+str(solverConfig.bitrateRatio)+""" ; segmentQualityMin = """+str(solverConfig.segmentDuration)+""" ;}
 \\begin{tikzpicture}
  \\pgfplotscreateplotcyclelist{My color list}{%
      {blue,solid, very thick},%
@@ -242,50 +243,51 @@ if __name__ == '__main__':
         for selectionPerSegment in config['ManagerConfig']['selectionPerSegment'].split(','):
             for nbQer in config['ManagerConfig']['nbQer'].split(','):
                 for segmentDuration in config['ManagerConfig']['segmentDuration'].split(','):
-                    for minSurfaceBitrate in config['ManagerConfig']['minSurfaceBitrate'].split(','):
-                        for maxSurfaceBitrate in config['ManagerConfig']['maxSurfaceBitrate'].split(','):
-                            for minSegQuality in config['ManagerConfig']['minSegQuality'].split(','):
-                                nbTheta = config['ManagerConfig']['nbTheta']
-                                nbPhi = config['ManagerConfig']['nbPhi']
-                                nbHDim = config['ManagerConfig']['nbHDim']
-                                nbVDim = config['ManagerConfig']['nbVDim']
-                                dimMin = config['ManagerConfig']['dimMin']
-                                dimMax = config['ManagerConfig']['dimMax']
-                                nbHPixels = config['ManagerConfig']['nbHPixels']
-                                nbVPixels = config['ManagerConfig']['nbVPixels']
-                                viewportHAngle = config['ManagerConfig']['viewportHAngle']
-                                viewportVAngle = config['ManagerConfig']['viewportVAngle']
-                                pathToTraces = config['ManagerConfig']['pathToTraces']
-                                pathToTracesHash = config['ManagerConfig']['pathToTracesHash']
-                                pathToPrecomputedIntersection = config['ManagerConfig']['pathToPrecomputedIntersection']
-                                pathToPrecomputedSegments =  config['ManagerConfig']['pathToPrecomputedSegments']
-                                solverConfig = SolverConfiguration(selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments)
-                                with open('/tmp/tmpSolverConfig.ini', 'w') as o:
-                                    o.write(solverConfig.GetConfigurationStr())
-                                sub.call([config['ManagerConfig']['pathToPreprocessing'], '-c', '/tmp/tmpSolverConfig.ini'])
-                                sub.call([config['ManagerConfig']['pathToPostprocessing'], '-c', '/tmp/tmpSolverConfig.ini'])
-                                shutil.copyfile(solverConfig.PathToPosHeatmap(), '{}/{}'.format(outputDir, solverConfig.PosHeatmapName(True)))
-                                shutil.copyfile(solverConfig.PathToDimHeatmap(), '{}/{}'.format(outputDir, solverConfig.DimHeatmapName(True)))
-                                shutil.copyfile(solverConfig.PathToLatexPlot(), '{}/{}'.format(outputDir, solverConfig.LatexPlotName(True)))
-                                shutil.copyfile(solverConfig.PathToPostprocessing(), '{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)))
-                                shutil.copyfile(solverConfig.PathToPercentileName(), '{}/{}'.format(outputDir, solverConfig.PercentileName(True)))
-                                shutil.copyfile(solverConfig.PathToRawQuality(), '{}/{}'.format(outputDir, solverConfig.RawQualityName(True)))
-                                rawQualities = GetRawQualities(solverConfig.PathToRawQuality())
-                                optiRawQualities += rawQualities[0]
-                                heuriRawQualities += rawQualities[1]
-                                randomRawQualities += rawQualities[2]
-                                sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.PosHeatmapName(), solverConfig.PosHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
-                                sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.DimHeatmapName(), solverConfig.DimHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
-                                sub.call(['latexrun', solverConfig.LatexPlotName(True)], cwd=outputDir)
-                                listOfOutputPdf.append('{}/{}.pdf'.format(outputDir, solverConfig.LatexPlotName(True)[:-4]))
-                                #copy postprocessing output into one file
-                                with open('{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)), 'r') as i:
-                                    for line in i:
-                                        postprocessingO.write(solverConfig.PostprocessingOutputLineId()+' '+line)
-                                with open('{}/{}.tex'.format(outputDir, solverConfig.PercentileName(True)[:-4]), 'w') as o:
-                                    o.write(PrintCdfLatex(solverConfig))
-                                sub.call(['latexrun', '{}.tex'.format(solverConfig.PercentileName(True)[:-4])], cwd=outputDir)
-                                listOfOutputPdf.append('{}/{}.pdf'.format(outputDir, solverConfig.PercentileName(True)[:-4]))
+                    for bitrateRatio in config['ManagerConfig']['bitrateRatio'].split(','):
+                        for minSurfaceBitrate in config['ManagerConfig']['minSurfaceBitrate'].split(','):
+                            for maxSurfaceBitrate in config['ManagerConfig']['maxSurfaceBitrate'].split(','):
+                                for minSegQuality in config['ManagerConfig']['minSegQuality'].split(','):
+                                    nbTheta = config['ManagerConfig']['nbTheta']
+                                    nbPhi = config['ManagerConfig']['nbPhi']
+                                    nbHDim = config['ManagerConfig']['nbHDim']
+                                    nbVDim = config['ManagerConfig']['nbVDim']
+                                    dimMin = config['ManagerConfig']['dimMin']
+                                    dimMax = config['ManagerConfig']['dimMax']
+                                    nbHPixels = config['ManagerConfig']['nbHPixels']
+                                    nbVPixels = config['ManagerConfig']['nbVPixels']
+                                    viewportHAngle = config['ManagerConfig']['viewportHAngle']
+                                    viewportVAngle = config['ManagerConfig']['viewportVAngle']
+                                    pathToTraces = config['ManagerConfig']['pathToTraces']
+                                    pathToTracesHash = config['ManagerConfig']['pathToTracesHash']
+                                    pathToPrecomputedIntersection = config['ManagerConfig']['pathToPrecomputedIntersection']
+                                    pathToPrecomputedSegments =  config['ManagerConfig']['pathToPrecomputedSegments']
+                                    solverConfig = SolverConfiguration(selectionPerSegment, nbQer, segmentDuration, minSurfaceBitrate, maxSurfaceBitrate, minSegQuality, bitrateRatio, nbTheta, nbPhi, nbHDim, nbVDim, dimMin, dimMax, nbHPixels, nbVPixels, viewportHAngle, viewportVAngle, pathToTraces, pathToTracesHash, pathToPrecomputedIntersection, pathToPrecomputedSegments)
+                                    with open('/tmp/tmpSolverConfig.ini', 'w') as o:
+                                        o.write(solverConfig.GetConfigurationStr())
+                                    sub.call([config['ManagerConfig']['pathToPreprocessing'], '-c', '/tmp/tmpSolverConfig.ini'])
+                                    sub.call([config['ManagerConfig']['pathToPostprocessing'], '-c', '/tmp/tmpSolverConfig.ini'])
+                                    shutil.copyfile(solverConfig.PathToPosHeatmap(), '{}/{}'.format(outputDir, solverConfig.PosHeatmapName(True)))
+                                    shutil.copyfile(solverConfig.PathToDimHeatmap(), '{}/{}'.format(outputDir, solverConfig.DimHeatmapName(True)))
+                                    shutil.copyfile(solverConfig.PathToLatexPlot(), '{}/{}'.format(outputDir, solverConfig.LatexPlotName(True)))
+                                    shutil.copyfile(solverConfig.PathToPostprocessing(), '{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)))
+                                    shutil.copyfile(solverConfig.PathToPercentileName(), '{}/{}'.format(outputDir, solverConfig.PercentileName(True)))
+                                    shutil.copyfile(solverConfig.PathToRawQuality(), '{}/{}'.format(outputDir, solverConfig.RawQualityName(True)))
+                                    rawQualities = GetRawQualities(solverConfig.PathToRawQuality())
+                                    optiRawQualities += rawQualities[0]
+                                    heuriRawQualities += rawQualities[1]
+                                    randomRawQualities += rawQualities[2]
+                                    sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.PosHeatmapName(), solverConfig.PosHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
+                                    sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.DimHeatmapName(), solverConfig.DimHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
+                                    sub.call(['latexrun', solverConfig.LatexPlotName(True)], cwd=outputDir)
+                                    listOfOutputPdf.append('{}/{}.pdf'.format(outputDir, solverConfig.LatexPlotName(True)[:-4]))
+                                    #copy postprocessing output into one file
+                                    with open('{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)), 'r') as i:
+                                        for line in i:
+                                            postprocessingO.write(solverConfig.PostprocessingOutputLineId()+' '+line)
+                                    with open('{}/{}.tex'.format(outputDir, solverConfig.PercentileName(True)[:-4]), 'w') as o:
+                                        o.write(PrintCdfLatex(solverConfig))
+                                    sub.call(['latexrun', '{}.tex'.format(solverConfig.PercentileName(True)[:-4])], cwd=outputDir)
+                                    listOfOutputPdf.append('{}/{}.pdf'.format(outputDir, solverConfig.PercentileName(True)[:-4]))
 
     with open('{}/{}'.format(outputDir, 'globalPercentile.txt'), 'w') as o:
         o.write('cdf opti heuri random\n')
