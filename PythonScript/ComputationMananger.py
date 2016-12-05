@@ -5,6 +5,8 @@ import configparser
 import os
 import math
 
+import numpy as np
+
 import shutil
 
 import subprocess as sub
@@ -81,11 +83,33 @@ class SolverConfiguration:
         return self.OutputDir() + '/'+self.LatexPlotName()
     def PathToPostprocessing(self):
         return self.OutputDir() + '/'+self.PostprocessingName()
+    def PathToPercentileName(self):
+        return self.OutputDir() + '/'+self.PercentileName()
+    def PathToRawQuality(self):
+        return self.OutputDir() + '/'+self.RawQualityName()
     @staticmethod
     def PostprocessingOutputLineComment():
         return 'segmentDuration nbQer minSegQuality minSurfaceBitrate maxSurfaceBitrate'
     def PostprocessingOutputLineId(self):
         return '{} {} {} {} {}'.format(self.segmentDuration, self.nbQer, self.minSegQuality, self.minSurfaceBitrate, self.maxSurfaceBitrate)
+
+def GetRawQualities(pathToRawQualities):
+    opti = []
+    heuri = []
+    random = []
+    with open(pathToRawQualities, 'r') as i:
+        first = True
+        for line in i:
+            if first:
+                first = False
+            else:
+                values = line.split(' ')
+                opti.append(float(values[0]))
+                heuri.append(float(values[1]))
+                random.append(float(values[2]))
+    return (opti, heuri, random)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run multiple optimal solutions');
 
@@ -102,6 +126,9 @@ if __name__ == '__main__':
     config.read(args.configFile)
 
     listOfOutputPdf = []
+    optiRawQualities = []
+    heuriRawQualities = []
+    randomRawQualities = []
 
     with open(outputDir+'/mergedPostprocessing.txt', 'w') as postprocessingO:
         postprocessingO.write(SolverConfiguration.PostprocessingOutputLineComment()+' opti heur random\n')
@@ -134,8 +161,12 @@ if __name__ == '__main__':
                                 shutil.copyfile(solverConfig.PathToDimHeatmap(), '{}/{}'.format(outputDir, solverConfig.DimHeatmapName(True)))
                                 shutil.copyfile(solverConfig.PathToLatexPlot(), '{}/{}'.format(outputDir, solverConfig.LatexPlotName(True)))
                                 shutil.copyfile(solverConfig.PathToPostprocessing(), '{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)))
-                                shutil.copyfile(solverConfig.PercentileName(), '{}/{}'.format(outputDir, solverConfig.PercentileName(True)))
-                                shutil.copyfile(solverConfig.RawQualityName(), '{}/{}'.format(outputDir, solverConfig.RawQualityName(True)))
+                                shutil.copyfile(solverConfig.PathToPercentileName(), '{}/{}'.format(outputDir, solverConfig.PercentileName(True)))
+                                shutil.copyfile(solverConfig.PathToRawQuality(), '{}/{}'.format(outputDir, solverConfig.RawQualityName(True)))
+                                rawQualities = GetRawQualities(solverConfig.PathToRawQuality())
+                                optiRawQualities += rawQualities[0]
+                                heuriRawQualities += rawQualities[1]
+                                randomRawQualities += rawQualities[2]
                                 sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.PosHeatmapName(), solverConfig.PosHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
                                 sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.DimHeatmapName(), solverConfig.DimHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
                                 sub.call(['latexrun', solverConfig.LatexPlotName(True)], cwd=outputDir)
@@ -145,3 +176,11 @@ if __name__ == '__main__':
                                     for line in i:
                                         postprocessingO.write(solverConfig.PostprocessingOutputLineId()+' '+line)
     sub.call(['pdfunite']+listOfOutputPdf+['{}/mergedPlots.pdf'.format(outputDir)])
+
+    with open('{}/{}'.format(outputDir, 'globalPercentile.txt') as o:
+        o.write('cdf opti heuri random\n')
+        for i in range(0,101):
+            opti = np.percentile(optiRawQualities, i)
+            heuri = np.percentile(heuriRawQualities, i)
+            random = np.percentile(randomRawQualities, i)
+            o.write('{} {} {} {}\n'.format(i, opti, heuri, random))
