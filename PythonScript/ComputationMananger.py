@@ -69,6 +69,10 @@ class SolverConfiguration:
         return 'plot_heatmap_'+(self.OutputDirId() + '_{:.6f}_'.format(float(self.segmentDuration)) if fullId else '')+self.SolutionId()+'.tex'
     def PostprocessingName(self, fullId=False):
         return 'postprocessing_'+(self.OutputDirId() + '_{:.6f}_'.format(float(self.segmentDuration)) if fullId else '')+self.SolutionId()+'.txt'
+    def PercentileName(self, fullId=False):
+        return 'percentile_'+(self.OutputDirId() + '_{:.6f}_'.format(float(self.segmentDuration)) if fullId else '')+self.SolutionId()+'.txt'
+    def RawQualityName(self, fullId=False):
+        return 'rawQuality_'+(self.OutputDirId() + '_{:.6f}_'.format(float(self.segmentDuration)) if fullId else '')+self.SolutionId()+'.txt'
     def PathToPosHeatmap(self):
         return self.OutputDir() + '/'+self.PosHeatmapName()
     def PathToDimHeatmap(self):
@@ -130,6 +134,8 @@ if __name__ == '__main__':
                                 shutil.copyfile(solverConfig.PathToDimHeatmap(), '{}/{}'.format(outputDir, solverConfig.DimHeatmapName(True)))
                                 shutil.copyfile(solverConfig.PathToLatexPlot(), '{}/{}'.format(outputDir, solverConfig.LatexPlotName(True)))
                                 shutil.copyfile(solverConfig.PathToPostprocessing(), '{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)))
+                                shutil.copyfile(solverConfig.PercentileName(), '{}/{}'.format(outputDir, solverConfig.PercentileName(True)))
+                                shutil.copyfile(solverConfig.RawQualityName(), '{}/{}'.format(outputDir, solverConfig.RawQualityName(True)))
                                 sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.PosHeatmapName(), solverConfig.PosHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
                                 sub.call(['sed', '-i.bak', 's/{}/{}/g'.format(solverConfig.DimHeatmapName(), solverConfig.DimHeatmapName(True)), solverConfig.LatexPlotName(True)], cwd=outputDir)
                                 sub.call(['latexrun', solverConfig.LatexPlotName(True)], cwd=outputDir)
