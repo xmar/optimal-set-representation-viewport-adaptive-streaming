@@ -109,6 +109,113 @@ def GetRawQualities(pathToRawQualities):
                 random.append(float(values[2]))
     return (opti, heuri, random)
 
+def PrintCdfLatex(solverConfig):
+    return """\\documentclass{article}
+\\usepackage{pgfplots}
+\\usepackage{xcolor}
+
+\\pgfplotsset{compat=newest}
+
+\\begin{document}
+\\begin{figure}
+ \\section{ Segment size: """+str(solverConfig.segmentDuration)+""" s; nbTheta = """+str(solverConfig.nbTheta)+""";
+ nbPhi = """+str(solverConfig.nbPhi)+""" nbHdim = """+str(solverConfig.nbHDim)+""" ; nbVdim = """+str(solverConfig.nbVDim)+""" ; dimMin= """+str(solverConfig.dimMin)+""" ; dimMax = """+str(solverConfig.dimMax)+""" ; bMin = """+str(solverConfig.minSurfaceBitrate)+""" ; bMax = """+str(solverConfig.maxSurfaceBitrate)+""" ; segmentQualityMin = """+str(solverConfig.segmentDuration)+""" ;}
+\\begin{tikzpicture}
+ \\pgfplotscreateplotcyclelist{My color list}{%
+     {blue,solid, very thick},%
+     {red,densely dashed, very thick},%
+     {green,densely dotted, very thick},%
+ }
+ \\pgfplotsset{every axis legend/.append style={
+         at={(0.05,0.97)},
+ anchor=south west,
+ draw=none,
+ fill=none,
+ legend columns=4,
+ column sep=15pt,
+ /tikz/every odd column/.append style={column sep=0cm},
+ %font=\\tiny
+ }}
+\\begin{axis}[
+  xlabel={visible bitrate $/$ $ S_{qer}$},
+  ylabel={CDF},
+  %xmin=0, xmax=180,
+  ymin=0, ymax=1,
+  y filter/.code={\\pgfmathparse{#1/100}\\pgfmathresult},
+  cycle list name={My color list},
+  legend cell align=left,
+  ]
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{optimalValues}, y expr=\\thisrow{cdf}] {"""+solverConfig.PercentileName(True)+"""};
+  \\addlegendentry{Optimal}
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{heuristicValues}, y expr=\\thisrow{cdf}] {"""+solverConfig.PercentileName(True)+"""};
+  \\addlegendentry{QEC heuristic}
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{heuristicRandomValues}, y expr=\\thisrow{cdf}] {"""+solverConfig.PercentileName(True)+"""};
+  \\addlegendentry{Random}
+
+  \\draw[dashed] (axis cs:1,0) -- (axis cs:1,1);
+\\end{axis}
+\\end{tikzpicture}
+\\caption{Position generated}
+\\end{figure}
+
+\\end{document}"""
+
+def PrintCdfGlobalLatex():
+    return """\\documentclass{article}
+\\usepackage{pgfplots}
+\\usepackage{xcolor}
+
+\\pgfplotsset{compat=newest}
+
+\\begin{document}
+\\begin{figure}
+ \\section{ Global }
+\\begin{tikzpicture}
+ \\pgfplotscreateplotcyclelist{My color list}{%
+     {blue,solid, very thick},%
+     {red,densely dashed, very thick},%
+     {green,densely dotted, very thick},%
+ }
+ \\pgfplotsset{every axis legend/.append style={
+         at={(0.05,0.97)},
+ anchor=south west,
+ draw=none,
+ fill=none,
+ legend columns=4,
+ column sep=15pt,
+ /tikz/every odd column/.append style={column sep=0cm},
+ %font=\\tiny
+ }}
+\\begin{axis}[
+  xlabel={visible bitrate $/$ $ S_{qer}$},
+  ylabel={CDF},
+  %xmin=0, xmax=180,
+  ymin=0, ymax=1,
+  y filter/.code={\\pgfmathparse{#1/100}\\pgfmathresult},
+  cycle list name={My color list},
+  legend cell align=left,
+  ]
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{opti}, y expr=\\thisrow{cdf}] {globalPercentile.txt};
+  \\addlegendentry{Optimal}
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{heuri}, y expr=\\thisrow{cdf}] {globalPercentile.txt};
+  \\addlegendentry{QEC heuristic}
+  \\addplot
+  table [col sep=space, x expr=\\thisrow{random}, y expr=\\thisrow{cdf}] {globalPercentile.txt};
+  \\addlegendentry{Random}
+
+  \\draw[dashed] (axis cs:1,0) -- (axis cs:1,1);
+\\end{axis}
+\\end{tikzpicture}
+\\caption{Position generated}
+\\end{figure}
+
+\\end{document}"""
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run multiple optimal solutions');
@@ -175,7 +282,10 @@ if __name__ == '__main__':
                                 with open('{}/{}'.format(outputDir, solverConfig.PostprocessingName(True)), 'r') as i:
                                     for line in i:
                                         postprocessingO.write(solverConfig.PostprocessingOutputLineId()+' '+line)
-    sub.call(['pdfunite']+listOfOutputPdf+['{}/mergedPlots.pdf'.format(outputDir)])
+                                with open('{}/{}.tex'.format(outputDir, solverConfig.PercentileName(True)[:-4]), 'w') as o:
+                                    o.write(PrintCdfLatex(solverConfig))
+                                sub.call(['latexrun', '{}.tex'.format(solverConfig.PercentileName(True)[:-4])], cwd=outputDir)
+                                listOfOutputPdf.append('{}/{}.pdf'.format(outputDir, solverConfig.PercentileName(True)[:-4]))
 
     with open('{}/{}'.format(outputDir, 'globalPercentile.txt'), 'w') as o:
         o.write('cdf opti heuri random\n')
@@ -184,3 +294,10 @@ if __name__ == '__main__':
             heuri = np.percentile(heuriRawQualities, i)
             random = np.percentile(randomRawQualities, i)
             o.write('{} {} {} {}\n'.format(i, opti, heuri, random))
+
+    with open('{}/globalPercentile.tex'.format(outputDir), 'w') as o:
+        o.write(PrintCdfGlobalLatex())
+    sub.call(['latexrun', 'globalPercentile.tex'], cwd=outputDir)
+    listOfOutputPdf.append('{}/globalPercentile.pdf'.format(outputDir))
+
+    sub.call(['pdfunite']+listOfOutputPdf+['{}/mergedPlots.pdf'.format(outputDir)])
