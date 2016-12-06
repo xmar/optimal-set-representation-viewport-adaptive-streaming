@@ -65,7 +65,7 @@ class SolverConfiguration:
     def OutputDirId(self):
         return '{:.6f}_{}_{}_{:.6f}_{:.6f}_{}_{}_{}_{}_{}_{:.6f}_{:.6f}_{}'.format(float(self.segmentDuration), self.nbTheta, self.nbPhi, float(self.dimMin), float(self.dimMax), self.nbHDim, self.nbVDim, self.nbHPixels, self.nbVPixels, self.nbHPixels, float(self.viewportHAngle)*math.pi/180, float(self.viewportVAngle)*math.pi/180, self.pathToTracesHash)
     def OutputDir(self):
-        return 'output_{}'.format(self.OutputDirId()) + ('/individualSeg_{:.6f}'.format(float(self.segmentDuration)) if (self.selectionPerSegment == 1) else ('/individualVideo_{:.6f}'.format(float(self.segmentDuration)) if (self.selectionPerSegment == 2) else ''))
+        return 'output_{}'.format(self.OutputDirId()) + ('/individualSeg_{:.6f}'.format(float(self.segmentDuration)) if (self.selectionPerSegment == '1') else ('/individualVideo_{:.6f}'.format(float(self.segmentDuration)) if (self.selectionPerSegment == '2') else ''))
     def PosHeatmapName(self, fullId=False):
         return 'heatmap_pos_solution_'+(self.OutputDirId() + '_{:.6f}_'.format(float(self.segmentDuration)) if fullId else '')+self.SolutionId()+'.txt'
     def DimHeatmapName(self, fullId=False):
