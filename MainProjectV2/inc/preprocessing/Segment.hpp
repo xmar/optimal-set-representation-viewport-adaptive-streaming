@@ -17,7 +17,9 @@ public:
   void AddVisibility(std::vector<bool> v) {visibilityVect.push_back(std::move(v));}
 
   auto const& GetVisibilityVect(void) const {return visibilityVect;}
-
+  auto const& GetUserId(void) const {return m_userId;}
+  auto const& GetVideoId(void) const {return m_videoId;}
+  auto const& GetSegmentId(void) const {return m_segmentId;}
 private:
   std::string m_userId;
   std::string m_videoId;

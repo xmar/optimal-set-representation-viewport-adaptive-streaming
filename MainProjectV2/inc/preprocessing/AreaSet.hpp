@@ -66,6 +66,8 @@ public:
     }
     return std::move(ans);
   }
+
+  auto const& GetAreas(void) const {return m_areas;}
 private:
   std::vector<Area> m_areas;
 };

@@ -46,6 +46,7 @@
 #include "common/ConfigArgs.hpp"
 #include "AreaSet.hpp"
 #include "PrecomputeSegmentsIntersections.hpp"
+#include "Optimal.hpp"
 
 #define DEBUG 0
 #if DEBUG
@@ -115,11 +116,16 @@ int main( int argc, const char* argv[] )
 
       std::cout << "Config param: "<< configArgs->Description() << std::endl;
 
-      AreaSet areaSet(configArgs->nbHPixels, configArgs->nbVPixels);
+      auto areaSet = std::make_shared<AreaSet>(configArgs->nbHPixels, configArgs->nbVPixels);
 
-      PrecomputeSegmentsIntersections psi;
-      psi.Init(configArgs->pathToTraces, areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration);
+      auto psi = std::make_shared<PrecomputeSegmentsIntersections>();
+      psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration);
 
+      std::cout << "Number of segment: " << psi->GetSegments().size() << std::endl;
+      std::cout << "Number of timestamps: " << psi->NbView() << std::endl;
+
+      Optimal opt(configArgs, areaSet, psi);
+      opt.Run();
    }
    catch(const po::error& e)
    {
