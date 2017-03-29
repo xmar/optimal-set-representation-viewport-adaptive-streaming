@@ -117,6 +117,7 @@ int main( int argc, const char* argv[] )
       std::cout << "Config param: "<< configArgs->Description() << std::endl;
 
       auto areaSet = std::make_shared<AreaSet>(configArgs->nbHPixels, configArgs->nbVPixels);
+      std::cout << "Nb Area = " << areaSet->GetAreas().size() << std::endl;
 
       auto psi = std::make_shared<PrecomputeSegmentsIntersections>();
       psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration);

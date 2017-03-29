@@ -34,12 +34,11 @@ struct ConfigArgs
                     viewportVAngle(0),
                     pathToTraces() {}
 
-  auto GetNbArea(void) const {return nbHPixels*nbVPixels;}
 
   std::string Description(void) const
   {
     std::stringstream ss("");
-    ss << nbQer << "; N = " << GetNbArea() << "; pathToTraces = " << pathToTraces
+    ss << "NbQer = " << nbQer << "; pathToTraces = " << pathToTraces
     << "MaxSurfaceBitrate = " << maxSurfaceBitrate <<"; MinSurfaceBitrate = " <<
     minSurfaceBitrate << "; Rb = " << bitrateRatio;
     return ss.str();

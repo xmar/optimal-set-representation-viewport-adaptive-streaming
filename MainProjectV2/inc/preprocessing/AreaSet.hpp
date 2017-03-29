@@ -35,6 +35,8 @@ public:
     }
 
     const auto& GetSurface(void) const {return m_surface;}
+    const auto& GetTheta(void) const {return m_theta;}
+    const auto& GetPhi(void) const {return m_phi;}
 private:
   double m_theta;
   double m_phi;
@@ -46,15 +48,19 @@ class AreaSet
 public:
   AreaSet(unsigned nbHPixels, unsigned nbVPixels): m_areas()
   {
-    m_areas.push_back(Area(0, 0, 2*PI*PI*std::sin(PI/nbVPixels)/nbVPixels));
-    for (unsigned j = 1; j < nbVPixels - 2; ++j)
+    // double minArea = 18;
+    // double maxArea = 0;
+    for (unsigned j = 1; j < 2*nbVPixels; j += 2)
     {
-      for (unsigned i = 0; i < nbHPixels; ++i)
+      unsigned localNbH = std::ceil(nbHPixels*std::sin(j*PI/(2*nbVPixels)));
+      for (unsigned i = 0; i < localNbH; ++i)
       {
-        m_areas.push_back(Area(i*2*PI/nbHPixels - PI, j*PI/nbVPixels, 2*PI*PI*sin(j*PI/nbVPixels)/(nbHPixels*nbVPixels)));
+        m_areas.push_back(Area(i*2*PI/localNbH - PI, j*PI/(2*nbVPixels), 2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
+        // minArea = std::min(minArea, double(2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
+        // maxArea = std::max(maxArea, double(2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
       }
     }
-    m_areas.push_back(Area(0, PI, 2*PI*PI*std::sin(PI/nbVPixels)/nbVPixels));
+    // std::cout << "Min area = " << minArea << "Max area = " << maxArea << std::endl;
   }
 
   std::vector<bool> GetVisibility(const RotMat& rotMat, double horizontalFoVAngle, double verticalFoVAngle) const
@@ -68,6 +74,20 @@ public:
   }
 
   auto const& GetAreas(void) const {return m_areas;}
+
+  std::vector<unsigned> GetAreaIdInTile(double startTheta, double endTheta, double startPhi, double endPhi)
+  {
+    std::vector<unsigned> ans;
+    for (unsigned i = 0; i < m_areas.size(); ++i)
+    {
+      if (m_areas[i].GetTheta() >= startTheta && m_areas[i].GetTheta() < endTheta &&
+          m_areas[i].GetPhi() >= startPhi && m_areas[i].GetPhi() < endPhi)
+      {
+        ans.push_back(i);
+      }
+    }
+    return std::move(ans);
+  }
 private:
   std::vector<Area> m_areas;
 };

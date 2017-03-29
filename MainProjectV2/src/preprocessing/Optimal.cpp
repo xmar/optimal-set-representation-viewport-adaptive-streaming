@@ -64,6 +64,14 @@ std::tuple<Float,Float> GetSurfaceBitrateQerOut(double Sqer, std::shared_ptr<Con
       std::cout.precision(8);
       std::cout << "Error: Bqer or Bout too big/small: " << (Sqer > firstL ? ". " : "* ") << Bqer << " | " << Bout << std::endl;
     }
+    if (std::isnan(Bqer))
+    {
+      Bqer = 0;
+    }
+    if (std::isnan(Bout))
+    {
+      Bout = 0;
+    }
     return std::forward_as_tuple(Bqer, Bout);
   }
   else
@@ -101,6 +109,14 @@ std::tuple<Float,Float> GetSurfaceBitrateQerOut(double Sqer, std::shared_ptr<Con
     {
       std::cout.precision(8);
       std::cout << "Error: Bqer or Bout too big/small: " << (Sqer < lastL ? ", " : "# ") << Bqer << " | " << Bout << std::endl;
+    }
+    if (std::isnan(Bqer))
+    {
+      Bqer = 0;
+    }
+    if (std::isnan(Bout))
+    {
+      Bout = 0;
     }
     return std::forward_as_tuple(Bqer, Bout);
   }
@@ -142,30 +158,56 @@ void Optimal::Run(void)
     }
     ++u;
   }
+  double max_b_qer(0.0);
+  double max_b_out(0.0);
+  double min_b_qer(4*PI);
+  double min_b_out(4*PI);
   for (auto n = 0; n <= nbArea; ++n)
   {
     double Squer = (n*4*PI)/nbArea;
     std::tie(b_qer_val[n], b_out_val[n]) = GetSurfaceBitrateQerOut(Squer, m_conf);
+    max_b_qer = std::max(max_b_qer, b_qer_val[n]);
+    max_b_out = std::max(max_b_out, b_out_val[n]);
+    min_b_qer = std::min(min_b_qer, b_qer_val[n]);
+    min_b_out = std::min(min_b_out, b_out_val[n]);
   }
 
   std::cout << "Nb views = " << psi_vid->NbView() << std::endl;
 
   //Create variables
-  IloNumVarArray b_qer(env, nbUser, 0, 4*PI, ILOFLOAT); //b_qer[u]
-  IloNumVarArray b_out(env, nbUser, 0, 4*PI, ILOFLOAT); //b_out[u]
-  IloNumVarArray b_qer_j(env, m_conf->nbQer, 0, 4*PI, ILOFLOAT); //b_qer[u]
-  IloNumVarArray b_out_j(env, m_conf->nbQer, 0, 4*PI, ILOFLOAT); //b_out[u]
+  IloNumVarArray b_qer(env, nbUser, 0, max_b_qer, ILOFLOAT); //b_qer[u]
+  IloNumVarArray b_out(env, nbUser, 0, max_b_out, ILOFLOAT); //b_out[u]
+  for (unsigned u = 0; u  < nbUser; ++u)
+  {
+    b_qer[u].setName((std::string("b_qer[") +std::to_string(u)+ std::string("]")).c_str());
+    b_out[u].setName((std::string("b_out[") +std::to_string(u)+ std::string("]")).c_str());
+  }
+  IloNumVarArray b_qer_j(env, m_conf->nbQer, min_b_qer, max_b_qer, ILOFLOAT); //b_qer[u]
+  IloNumVarArray b_out_j(env, m_conf->nbQer, min_b_out, max_b_out, ILOFLOAT); //b_out[u]
+  for (unsigned j = 0; j < m_conf->nbQer; ++j)
+  {
+    b_qer_j[j].setName((std::string("b_qer_j[") +std::to_string(j)+ std::string("]")).c_str());
+    b_qer_j[j].setName((std::string("b_qer_j[") +std::to_string(j)+ std::string("]")).c_str());
+  }
 
   VarMatrix q_qer(env, nbUser); // q_qer[u][a]
   for (unsigned u = 0; u < nbUser; ++u)
   {
     q_qer[u] = IloNumVarArray(env, nbArea, 0, 1, ILOINT);
+    for (unsigned a = 0; a < nbArea; ++a)
+    {
+      q_qer[u][a].setName((std::string("q_qer[") +std::to_string(u)+ std::string("][") +std::to_string(a)+ std::string("]")).c_str());
+    }
   }
 
   VarMatrix created_r(env, m_conf->nbQer);
   for (unsigned j = 0; j < m_conf->nbQer; ++j)
   {
     created_r[j] = IloNumVarArray(env, nbArea, 0, 1, ILOINT);
+    for (unsigned a = 0; a < nbArea; ++a)
+    {
+      created_r[j][a].setName((std::string("created_r[") +std::to_string(j)+ std::string("][") +std::to_string(a)+ std::string("]")).c_str());
+    }
   }
 
 
@@ -182,6 +224,32 @@ void Optimal::Run(void)
       model.add(selectBitrate);
     }
   }
+
+  //set tile constraints
+  unsigned nbHTile = 4;
+  unsigned nbVTile = 4;
+  for (unsigned thetaTile = 0; thetaTile < nbHTile; ++thetaTile)
+  {
+    for (unsigned phiTile = 0; phiTile < nbVTile; ++phiTile)
+    {
+      auto areaIds = m_areaSet->GetAreaIdInTile(thetaTile*2*PI/nbHTile - PI, (thetaTile+1)*2*PI/nbHTile - PI,
+                                                phiTile*PI/nbVTile - PI, (phiTile+1)*PI/nbVTile);
+      if (areaIds.size() > 1)
+      {
+        for (unsigned j = 0; j < m_conf->nbQer; ++j)
+        {
+          IloAnd tileContraint(env);
+          for (unsigned i = 1; i < areaIds.size(); ++i)
+          {
+            tileContraint.add(created_r[j][areaIds[0]] == created_r[j][areaIds[i]]);
+          }
+          tileContraint.setName((std::string("tile")+std::to_string(thetaTile)+std::string("_")+std::to_string(phiTile)).c_str());
+          model.add(tileContraint);
+        }
+      }
+    }
+  }
+
   for (unsigned u = 0; u < nbUser; ++u)
   {
     // for (unsigned a = 0; a < nbArea; ++a)
@@ -232,17 +300,27 @@ void Optimal::Run(void)
 
   // try
   // {
-    std::cout << "Ready to run" << std::endl;
+    std::cout << std::endl << "Ready to run" << std::endl;
 
     IloCplex cplex(model);
-    cplex.setParam(IloCplex::Threads, 1);
-    cplex.setParam(IloCplex::NodeFileInd,3);
-    cplex.setParam(IloCplex::WorkDir,".");
-    cplex.setParam(IloCplex::MemoryEmphasis,true);
+    cplex.setParam(IloCplex::Threads, 3);
+    // cplex.setParam(IloCplex::NodeFileInd,3);
+    // cplex.setParam(IloCplex::WorkDir,".");
+    // cplex.setParam(IloCplex::MemoryEmphasis,true);
+    cplex.setParam(IloCplex::DataCheck, true);
+
+    cplex.exportModel("model.lp");
+    cplex.exportModel("model.mps");
+    cplex.exportModel("model.nl");
 
     std::cout << "Start solving" << std::endl;
 
     cplex.solve();
+
+    std::cout << "Done" << std::endl;
+
+    env.out() << cplex.getStatus() << std::endl;
+    env.out() << cplex.getObjValue() << std::endl;
   }
   catch (IloException& e) {
     std::cerr << "Concert exception caught: " << e << std::endl;
