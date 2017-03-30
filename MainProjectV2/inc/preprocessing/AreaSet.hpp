@@ -56,6 +56,7 @@ public:
       for (unsigned i = 0; i < localNbH; ++i)
       {
         m_areas.push_back(Area(i*2*PI/localNbH - PI, j*PI/(2*nbVPixels), 2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
+        m_generatedAsQERCounter.push_back(0);
         // minArea = std::min(minArea, double(2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
         // maxArea = std::max(maxArea, double(2*PI*PI*sin(j*PI/(2*nbVPixels))/(localNbH*nbVPixels)));
       }
@@ -88,7 +89,10 @@ public:
     }
     return std::move(ans);
   }
+
+  void AddUseAsQer(unsigned AreaId) {++m_generatedAsQERCounter[AreaId];}
 private:
   std::vector<Area> m_areas;
+  std::vector<unsigned> m_generatedAsQERCounter;
 };
 }

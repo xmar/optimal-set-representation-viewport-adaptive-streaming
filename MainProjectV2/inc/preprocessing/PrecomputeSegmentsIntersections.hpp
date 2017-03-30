@@ -63,6 +63,20 @@ public:
        }
      }
    }
+   return std::move(segIdVect);
+ }
+
+ std::vector<std::string> GetVideoIdVect()
+ {
+   std::vector<std::string> vidIdVect;
+   for (auto s: m_segments)
+   {
+     if (vidIdVect.end() == std::find(vidIdVect.begin(), vidIdVect.end(), s->GetVideoId()))
+     {
+       vidIdVect.push_back(s->GetVideoId());
+     }
+   }
+   return std::move(vidIdVect);
  }
 private:
   std::vector<std::shared_ptr<Segment>> m_segments;
