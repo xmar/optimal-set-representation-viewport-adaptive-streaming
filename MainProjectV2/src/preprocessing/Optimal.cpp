@@ -197,15 +197,16 @@ void Optimal::Run(void)
       try{
         std::cout << "Init constants" << std::endl;
         //const values:
-        FloatMatrix b(env, nbVersion);
-        for (unsigned r = 0; r < nbVersion; ++r)
-        {
-          b[r] = IloNumArray(env, nbArea);
-          for (unsigned a = 0; a < nbArea; ++a)
-          {
-            b[r][a] = 0;
-          }
-        }
+        // FloatMatrix b(env, nbVersion);
+        // for (unsigned r = 0; r < nbVersion; ++r)
+        // {
+        //   b[r] = IloNumArray(env, nbArea);
+        //   for (unsigned a = 0; a < nbArea; ++a)
+        //   {
+        //     b[r][a] = 0;
+        //   }
+        // }
+        std::vector<std::tuple<double, double>> b;
 
         FloatMatrix v(env, nbUser);
         for (unsigned u = 0; u < nbUser; ++u)
@@ -214,6 +215,16 @@ void Optimal::Run(void)
           for (unsigned a = 0; a < nbArea; ++a)
           {
             v[u][a] = 0;
+          }
+        }
+
+        FloatMatrix v_b(env, nbUser);
+        for (unsigned u = 0; u < nbUser; ++u)
+        {
+          v_b[u] = IloNumArray(env, nbVersion);
+          for (unsigned r = 0; r < nbVersion; ++r)
+          {
+            v_b[u][r] = 0;
           }
         }
 
@@ -250,9 +261,13 @@ void Optimal::Run(void)
           double b_qer(0); double b_out(0);
           std::tie(b_qer,b_out) = GetSurfaceBitrateQerOut(Squer, m_conf);
 
-          for (auto a = 0; a < nbArea; ++a)
+          for (unsigned u = 0; u < nbUser; ++u)
           {
-            b[r][a] = m_pav->GetAllowedVersionVector()[r][a] == 1 ? b_qer : b_out;
+            auto sum = IloSum(v[u]);
+            for (auto a = 0; a < nbArea; ++a)
+            {
+              v_b[u][r] += v[u][a] * (m_pav->GetAllowedVersionVector()[r][a] == 1 ? b_qer : b_out) / sum;
+            }
           }
 
           max_b_qer = std::max(max_b_qer, b_qer);
@@ -260,6 +275,7 @@ void Optimal::Run(void)
           min_b_qer = std::min(min_b_qer, b_qer);
           min_b_out = std::min(min_b_out, b_out);
         }
+        v.end();
 
         std::cout << "Nb views = " << psi_vid->NbView() << std::endl;
 
@@ -276,33 +292,33 @@ void Optimal::Run(void)
             s[r][u].setName((std::string("c[r=") +std::to_string(r)+ std::string("][u=") +std::to_string(u)+ std::string("]")).c_str());
           }
         }
-        VarMatrix b_selected(env, nbUser);
-        for (unsigned u = 0; u  < nbUser; ++u)
-        {
-          b_selected[u] = IloNumVarArray(env, nbArea, min_b_out, max_b_qer, ILOFLOAT);
-          for (auto a = 0; a < nbArea; ++a)
-          {
-            b_selected[u][a].setName((std::string("b_selected[u=") +std::to_string(u)+ std::string("][a=") +std::to_string(a)+ std::string("]")).c_str());
-          }
-        }
+        // VarMatrix b_selected(env, nbUser);
+        // for (unsigned u = 0; u  < nbUser; ++u)
+        // {
+        //   b_selected[u] = IloNumVarArray(env, nbArea, min_b_out, max_b_qer, ILOFLOAT);
+        //   for (auto a = 0; a < nbArea; ++a)
+        //   {
+        //     b_selected[u][a].setName((std::string("b_selected[u=") +std::to_string(u)+ std::string("][a=") +std::to_string(a)+ std::string("]")).c_str());
+        //   }
+        // }
 
         std::cout << "Generate constraints" << std::endl;
 
-        //Constraints 1
-        for (unsigned u = 0; u  < nbUser; ++u)
-        {
-          for (auto a = 0; a < nbArea; ++a)
-          {
-              IloExpr selected_bitrate(env);
-              for (unsigned r = 0; r < nbVersion; ++r)
-              {
-                selected_bitrate += s[r][u] * b[r][a];
-              }
-              IloConstraint ic = b_selected[u][a] == selected_bitrate;
-              ic.setName((std::string("Const1_[u=") +std::to_string(u)+ std::string("][a=") +std::to_string(a)+ std::string("]")).c_str());
-              model.add(ic);
-          }
-        }
+        // //Constraints 1
+        // for (unsigned u = 0; u  < nbUser; ++u)
+        // {
+        //   for (auto a = 0; a < nbArea; ++a)
+        //   {
+        //       IloExpr selected_bitrate(env);
+        //       for (unsigned r = 0; r < nbVersion; ++r)
+        //       {
+        //         selected_bitrate += s[r][u] * b[r][a];
+        //       }
+        //       IloConstraint ic = b_selected[u][a] == selected_bitrate;
+        //       ic.setName((std::string("Const1_[u=") +std::to_string(u)+ std::string("][a=") +std::to_string(a)+ std::string("]")).c_str());
+        //       model.add(ic);
+        //   }
+        // }
 
         //Constraints 2
         for (unsigned u = 0; u  < nbUser; ++u)
@@ -339,9 +355,13 @@ void Optimal::Run(void)
       IloExpr sc(env);
       for (unsigned u = 0; u < nbUser; ++u)
       {
-        for (unsigned a = 0; a < nbArea; ++a)
+        // for (unsigned a = 0; a < nbArea; ++a)
+        // {
+        //   sc += (v[u][a] * b_selected[u][a] / IloSum(v[u]))/IloInt(nbUser);
+        // }
+        for (unsigned r = 0; r < nbVersion; ++r)
         {
-          sc += (v[u][a] * b_selected[u][a] / IloSum(v[u]))/IloInt(nbUser);
+          sc += s[r][u] * v_b[u][r]/IloInt(nbUser);
         }
       }
       model.add(IloMaximize(env, sc));
@@ -384,7 +404,6 @@ void Optimal::Run(void)
       env.out() << cplex.getStatus() << std::endl;
       env.out() << cplex.getObjValue() << std::endl;
 
-      exit(1);
 
       std::cout << "====== Solution ======" << std::endl;
       for (unsigned uid = 0; uid < 11; ++uid)
