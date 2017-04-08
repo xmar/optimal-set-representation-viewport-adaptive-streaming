@@ -7,6 +7,12 @@
 
 #include <ilcplex/ilocplex.h>
 
+#include <fstream>
+
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
+
 #include <iostream>
 
 using namespace IMT;
@@ -126,6 +132,52 @@ std::tuple<Float,Float> GetSurfaceBitrateQerOut(double Sqer, std::shared_ptr<Con
 void Optimal::Run(void)
 {
 
+  std::string outputDir = m_conf->pathToOutputDir + "/" + std::to_string(m_conf->nbQer)+"_"+ std::to_string(m_conf->nbHPixels)+"x"+std::to_string(m_conf->nbVPixels);
+  if (m_conf->useTile)
+  {
+    outputDir += "Tiled"+ std::to_string(m_conf->nbHTiles)+"x"+std::to_string(m_conf->nbVTiles);
+  }
+
+  if (!fs::is_directory(m_conf->pathToOutputDir))
+  {
+    fs::create_directory(m_conf->pathToOutputDir);
+  }
+  if (!fs::is_directory(outputDir))
+  {
+    fs::create_directory(outputDir);
+  }
+
+  std::vector<double> sqer_vec;
+  std::vector<double> n_vec;
+  unsigned int testCount = 0;
+  unsigned int totalTest = 0;
+  for(auto videoId: m_psi->GetVideoIdVect())
+  {
+    for (auto segmentId: m_psi->GetSegIdVect(videoId))
+    {
+      ++totalTest;
+    }
+  }
+  auto Percentile = [](std::vector<double>& vect, double percentile)
+  {
+    if (percentile == 0)
+    {
+      return vect[0];
+    }
+    else if(percentile == 100)
+    {
+      return vect[vect.size()-1];
+    }
+    else
+    {
+      Float dist = percentile*vect.size()/100.f;
+      unsigned int down = std::floor(dist);
+      unsigned int up = down+1;
+      return vect[down] * (1-(dist-down)) + vect[up] * (1-(up-dist));
+    }
+  };
+
+  //Start processing loop
   for(auto videoId: m_psi->GetVideoIdVect())
   {
     for (auto segmentId: m_psi->GetSegIdVect(videoId))
@@ -258,29 +310,32 @@ void Optimal::Run(void)
       // }
 
       // //set tile constraints
-      // unsigned nbHTile = 4;
-      // unsigned nbVTile = 4;
-      // for (unsigned thetaTile = 0; thetaTile < nbHTile; ++thetaTile)
-      // {
-      //   for (unsigned phiTile = 0; phiTile < nbVTile; ++phiTile)
-      //   {
-      //     auto areaIds = m_areaSet->GetAreaIdInTile(thetaTile*2*PI/nbHTile - PI, (thetaTile+1)*2*PI/nbHTile - PI,
-      //                                               phiTile*PI/nbVTile - PI, (phiTile+1)*PI/nbVTile);
-      //     if (areaIds.size() > 1)
-      //     {
-      //       for (unsigned j = 0; j < m_conf->nbQer; ++j)
-      //       {
-      //         IloAnd tileContraint(env);
-      //         for (unsigned i = 1; i < areaIds.size(); ++i)
-      //         {
-      //           tileContraint.add(created_r[j][areaIds[0]] == created_r[j][areaIds[i]]);
-      //         }
-      //         tileContraint.setName((std::string("tile")+std::to_string(thetaTile)+std::string("_")+std::to_string(phiTile)).c_str());
-      //         model.add(tileContraint);
-      //       }
-      //     }
-      //   }
-      // }
+      if (m_conf->useTile)
+      {
+        unsigned nbHTile = m_conf->nbHTiles;
+        unsigned nbVTile = m_conf->nbVTiles;
+        for (unsigned thetaTile = 0; thetaTile < nbHTile; ++thetaTile)
+        {
+          for (unsigned phiTile = 0; phiTile < nbVTile; ++phiTile)
+          {
+            auto areaIds = m_areaSet->GetAreaIdInTile(thetaTile*2*PI/nbHTile - PI, (thetaTile+1)*2*PI/nbHTile - PI,
+                                                      phiTile*PI/nbVTile - PI, (phiTile+1)*PI/nbVTile);
+            if (areaIds.size() > 1)
+            {
+              for (unsigned j = 0; j < m_conf->nbQer; ++j)
+              {
+                IloAnd tileContraint(env);
+                for (unsigned i = 1; i < areaIds.size(); ++i)
+                {
+                  tileContraint.add(created_r[j][areaIds[0]] == created_r[j][areaIds[i]]);
+                }
+                tileContraint.setName((std::string("tile")+std::to_string(thetaTile)+std::string("_")+std::to_string(phiTile)).c_str());
+                model.add(tileContraint);
+              }
+            }
+          }
+        }
+      }
 
       double M = 4*PI;
       double e = 0.0000001;
@@ -312,6 +367,9 @@ void Optimal::Run(void)
         IloConstraint ic3 = IloSum(created_r[j]) == sc_nb;
         ic3.setName((std::string("1.g[j=")+std::to_string(j)+std::string("]")).c_str());
         model.add(ic3);
+
+        //DEBUG
+          model.add(IloSum(created_r[j]) <= 100);
 
         //usedRep
         IloExpr sc_used(env);
@@ -391,7 +449,7 @@ void Optimal::Run(void)
         }
         IloConstraint ic1 =  1 <= sc_j2 - sc_j1 ;//+ std::pow(2, nbArea) * (1 - usedCreatedRep[j+1]);
         ic1.setName((std::string("1.h[j=")+std::to_string(j)+std::string("]")).c_str());
-        // model.add(ic1);
+        model.add(ic1);
 
         model.add(usedCreatedRep[j] >= usedCreatedRep[j+1]);
       }
@@ -423,15 +481,26 @@ void Optimal::Run(void)
         std::cout << std::endl << "Ready to run" << std::endl;
 
         IloCplex cplex(model);
-        cplex.setParam(IloCplex::EpGap,0.03);
+        cplex.setParam(IloCplex::EpGap, m_conf->epGap);
         // cplex.setParam(IloCplex::Threads, 1);
         // cplex.setParam(IloCplex::NodeFileInd,3);
         // cplex.setParam(IloCplex::WorkDir,".");
         // cplex.setParam(IloCplex::MemoryEmphasis,true);
         cplex.setParam(IloCplex::DataCheck, true);
 
-        cplex.exportModel((videoId+"_"+segmentId+"_model.lp").c_str());
-        cplex.exportModel((videoId+"_"+segmentId+"_model.mps").c_str());
+        std::string outputSolPath = outputDir+"/"+videoId+"_"+segmentId+"_solution.sol";
+
+        if (fs::exists(outputSolPath))
+        {
+          std::cout << "Load solution" << std::endl;
+
+          cplex.readSolution(outputSolPath.c_str());
+
+          std::cout << "Done" << std::endl;
+        }
+
+        cplex.exportModel((outputDir+"/"+videoId+"_"+segmentId+"_model.lp").c_str());
+        cplex.exportModel((outputDir+"/"+videoId+"_"+segmentId+"_model.mps").c_str());
 
         std::cout << "Start solving" << std::endl;
 
@@ -439,7 +508,10 @@ void Optimal::Run(void)
 
         std::cout << "Done" << std::endl;
 
-        cplex.writeSolution((videoId+"_"+segmentId+"_solution.xsl").c_str());
+        cplex.writeSolution(outputSolPath.c_str());
+
+
+
 
         env.out() << cplex.getStatus() << std::endl;
         env.out() << cplex.getObjValue() << std::endl;
@@ -470,7 +542,7 @@ void Optimal::Run(void)
 
           for (unsigned n = 0; n <= nbArea; ++n)
           {
-            if (cplex.getValue(nb[rep][n]) > 0)
+            if (cplex.getValue(nb[rep][n]) > 0.5)
             {
               std::cout << "Nb = " << n << " B_qer_val = "<< b_qer_val[n] << " B_out_val = "<< b_out_val[n] << std::endl;
             }
@@ -496,6 +568,7 @@ void Optimal::Run(void)
             //   << ", " << cplex.getValue(q_b_out[uid][a]) << ")) ";
             visible += v[uid][a] * (cplex.getValue(q_b_qer[uid][a]) + cplex.getValue(q_b_out[uid][a]));
             sumV += v[uid][a];
+
           }
           std::cout << std::endl;
           std::cout << "Visible: " << visible/sumV << std::endl;
@@ -506,19 +579,43 @@ void Optimal::Run(void)
         {
           if (cplex.getValue(usedCreatedRep[j]) > 0.5)
           {
+            double sqer = 0;
             for (unsigned a = 0; a < nbArea; ++a)
             {
               if (cplex.getValue(created_r[j][a]) > 0.5)
               {
                 m_areaSet->AddUseAsQer(a);
               }
+              sqer += cplex.getValue(created_r[j][a]) * m_areaSet->GetAreas()[a].GetSurface();
+              sqer_vec.push_back(sqer);
             }
+            unsigned n = 0;
+            for (unsigned a = 0; a < nbArea; ++a)
+            {
+              n += cplex.getValue(created_r[j][a]);
+            }
+            n_vec.push_back(int(n));
           }
         }
 
         cplex.end();
         model.end();
         env.end();
+
+        m_areaSet->WriteStatistics(outputDir+"/results_tmp.txt");
+
+        std::sort(sqer_vec.begin(), sqer_vec.end());
+        std::sort(n_vec.begin(), n_vec.end());
+        std::ofstream ofs(outputDir+"/results_sqer_tmp.txt");
+        ofs << "cdf sqer n\n";
+        for (double percentile = 0.0; percentile <= 100.0; percentile += 1)
+        {
+          ofs << percentile << " " << Percentile(sqer_vec, percentile) << " " << Percentile(n_vec, percentile) << "\n";
+        }
+
+        ofs = std::ofstream(outputDir+"/results_status_tmp.txt");
+        ofs << testCount << " / " << totalTest  << " gap " << m_conf->epGap << " \n";
+        ++testCount;
       }
       catch (IloException& e) {
         std::cerr << "Concert exception caught: " << e << std::endl;
@@ -529,5 +626,18 @@ void Optimal::Run(void)
     }
   }
 
+  m_areaSet->WriteStatistics(outputDir+"/results.txt");
+
+  std::sort(sqer_vec.begin(), sqer_vec.end());
+  std::sort(n_vec.begin(), n_vec.end());
+  std::ofstream ofs(outputDir+"/results_sqer.txt");
+  ofs << "cdf sqer n\n";
+  for (double percentile = 0.0; percentile <= 100.0; percentile += 1)
+  {
+    ofs << percentile << " " << Percentile(sqer_vec, percentile) << " " << Percentile(n_vec, percentile) << "\n";
+  }
+
+  ofs = std::ofstream(outputDir+"/results_status.txt");
+  ofs << testCount << " / " << totalTest  << " gap " << m_conf->epGap << " \n";
   std::cout << "Done" << std::endl;
 }

@@ -46,6 +46,7 @@
 #include "common/ConfigArgs.hpp"
 #include "AreaSet.hpp"
 #include "PrecomputeSegmentsIntersections.hpp"
+#include "PrecomputedAllowedVersion.hpp"
 #include "Optimal.hpp"
 
 #define DEBUG 0
@@ -113,6 +114,20 @@ int main( int argc, const char* argv[] )
       configArgs->viewportHAngle = ptree.get<double>("Global.viewportHAngle")*PI/180.0;
       configArgs->viewportVAngle = ptree.get<double>("Global.viewportVAngle")*PI/180.0;
       configArgs->pathToTraces = ptree.get<std::string>("Global.pathToTraces");
+      configArgs->pathToOutputDir = ptree.get<std::string>("Global.pathToOutputDir");
+      configArgs->useTile = ptree.get<bool>("Global.useTile");
+      configArgs->epGap = ptree.get<float>("Global.epGap");
+      configArgs->nbTheta = ptree.get<unsigned int>("Global.nbTheta");
+      configArgs->nbPhi = ptree.get<unsigned int>("Global.nbPhi");
+      configArgs->nbHDim = ptree.get<unsigned int>("Global.nbHDim");
+      configArgs->nbVDim = ptree.get<unsigned int>("Global.nbVDim");
+      configArgs->dimMin = ptree.get<double>("Global.dimMin");
+      configArgs->dimMax = ptree.get<double>("Global.dimMax");
+      if (configArgs->useTile)
+      {
+        configArgs->nbHTiles = ptree.get<unsigned>("Tiles.nbHTiles");
+        configArgs->nbHTiles = ptree.get<unsigned>("Tiles.nbHTiles");
+      }
 
       std::cout << "Config param: "<< configArgs->Description() << std::endl;
 

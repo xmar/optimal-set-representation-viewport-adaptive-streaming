@@ -2,6 +2,8 @@
 /*Class that regroup a set of area that partition the sphere*/
 
 #include <vector>
+#include <fstream>
+#include <string>
 
 #include "common/Common.hpp"
 
@@ -90,7 +92,23 @@ public:
     return std::move(ans);
   }
 
-  void AddUseAsQer(unsigned AreaId) {++m_generatedAsQERCounter[AreaId];}
+  void AddUseAsQer(unsigned AreaId) {m_generatedAsQERCounter[AreaId] += 1;}
+
+  void WriteStatistics(std::string outputPath)
+  {
+    std::ofstream ofs(outputPath);
+    ofs << "theta phi ratioQer\n";
+    unsigned count = 0;
+    for (unsigned int i = 0; i < m_generatedAsQERCounter.size(); ++i)
+    {
+      count += m_generatedAsQERCounter[i];
+    }
+    for (unsigned int i = 0; i < m_generatedAsQERCounter.size(); ++i)
+    {
+      ofs << m_areas[i].GetTheta() << " " << m_areas[i].GetPhi() << " "
+          << (count != 0 ? double(m_generatedAsQERCounter[i])/count : 0) << "\n";
+    }
+  }
 private:
   std::vector<Area> m_areas;
   std::vector<unsigned> m_generatedAsQERCounter;
