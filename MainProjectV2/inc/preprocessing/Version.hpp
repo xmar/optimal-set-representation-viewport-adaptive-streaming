@@ -11,6 +11,8 @@ class Version
 public:
   Version(std::shared_ptr<AreaSet> areaSet, float theta, float phi, float hDim, float vDim);
 
+  auto const& operator[](unsigned i) const{ return m_version[i];}
+
   auto const& GetVersion(void) const {return m_version;}
   auto const& GetTheta(void) const {return m_theta;}
   auto const& GetPhi(void) const {return m_phi;}

@@ -134,13 +134,16 @@ int main( int argc, const char* argv[] )
       auto areaSet = std::make_shared<AreaSet>(configArgs->nbHPixels, configArgs->nbVPixels);
       std::cout << "Nb Area = " << areaSet->GetAreas().size() << std::endl;
 
+      auto pav = std::make_shared<PrecomputedAllowedVersion>(areaSet, configArgs);
+
+      std::cout << "PrecomputedAllowedVersion initialised" << std::endl;
+
       auto psi = std::make_shared<PrecomputeSegmentsIntersections>();
       psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration);
-
       std::cout << "Number of segment: " << psi->GetSegments().size() << std::endl;
       std::cout << "Number of timestamps: " << psi->NbView() << std::endl;
 
-      Optimal opt(configArgs, areaSet, psi);
+      Optimal opt(configArgs, areaSet, psi, pav);
       opt.Run();
    }
    catch(const po::error& e)

@@ -2,6 +2,9 @@
 /*This class generate a list of representation that are allowed to be generated*/
 
 #include "Version.hpp"
+#include <iostream>
+#include <memory>
+#include <vector>
 
 namespace IMT {
 class PrecomputedAllowedVersion
