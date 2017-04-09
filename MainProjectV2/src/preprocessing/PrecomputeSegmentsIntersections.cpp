@@ -106,6 +106,7 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
 
     unsigned seg_id(0);
     auto seg = std::make_shared<Segment>(userId, videoId, std::to_string(seg_id));
+    bool hasSomething = false;
     double nextSegTx(segmentLengthSeconds);
 
     std::ifstream ifs(path);
@@ -122,8 +123,18 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
         nextSegTx += segmentLengthSeconds;
         m_segments.emplace_back(std::move(seg));
         seg = std::make_shared<Segment>(userId, videoId, std::to_string(seg_id));
+        hasSomething = false;
+      }
+      if (!seg->IsStartPositionSet())
+      {
+        seg->SetStartPosition(RotationMatrixToQuaternion(rotMat));
       }
       seg->AddVisibility(areaSet.GetVisibility(rotMat, horizontalFoVAngle, verticalFoVAngle));
+      hasSomething = true;
+    }
+    if (hasSomething)
+    {
+      m_segments.emplace_back(std::move(seg));
     }
   }
 }

@@ -9,6 +9,7 @@
 #include <ilcplex/ilocplex.h>
 
 #include <fstream>
+#include <random>
 
 #include <boost/filesystem.hpp>
 
@@ -178,6 +179,18 @@ void Optimal::Run(void)
     }
   };
 
+  //the random device that will seed the generator
+  std::random_device seeder;
+  //then make a mersenne twister engine
+  std::mt19937 engine(seeder());
+
+
+  //Vector that store the solutions
+  std::vector<double> optiVisibleB;
+  std::vector<double> heuristicVisibleB;
+  std::vector<double> randomVisibleB;
+  std::vector<double> versionSize;
+
   //Start processing loop
   for(auto videoId: m_psi->GetVideoIdVect())
   {
@@ -329,7 +342,7 @@ void Optimal::Run(void)
             sum += s[r][u];
           }
           IloConstraint ic = sum == IloInt(1);
-          ic.setName((std::string("Const1_[u=") +std::to_string(u)+ std::string("]")).c_str());
+          ic.setName((std::string("Const2_[u=") +std::to_string(u)+ std::string("]")).c_str());
           model.add(ic);
         }
 
@@ -339,14 +352,24 @@ void Optimal::Run(void)
           for (unsigned r = 0; r < nbVersion; ++r)
           {
             IloConstraint ic = s[r][u] <= c[r];
-            ic.setName((std::string("Const1_[u=") +std::to_string(u)+ std::string("][r=") +std::to_string(r)+ std::string("]")).c_str());
+            ic.setName((std::string("Const3_[u=") +std::to_string(u)+ std::string("][r=") +std::to_string(r)+ std::string("]")).c_str());
             model.add(ic);
           }
+        }
+
+        //Constraints 5
+        for (unsigned r = 0; r < nbVersion; ++r)
+        {
+          IloConstraint ic = IloSum(s[r]) >= c[r];
+          ic.setName((std::string("Const5_[r=") +std::to_string(r)+ std::string("]")).c_str());
+          model.add(ic);
         }
 
         //Constraint 4
         {
           IloConstraint ic = IloSum(c) <= IloInt(nbMaxVersion);
+          ic.setName((std::string("Const4")).c_str());
+          model.add(ic);
         }
 
       std::cout << "Generate objective" << std::endl;
@@ -406,105 +429,62 @@ void Optimal::Run(void)
 
 
       std::cout << "====== Solution ======" << std::endl;
-      for (unsigned uid = 0; uid < 11; ++uid)
+      IloNumArray c_sol(env);
+      cplex.getValues(c_sol, c);
+      std::cout << "Nb max version: " << nbMaxVersion << std::endl;
+      std::vector<unsigned> offeredVersion;
+      for (unsigned r = 0; r < nbVersion; ++r)
       {
-        IloNumArray s_sol(env);
-        cplex.getValues(s_sol, s[uid]);
-        unsigned rep = 0;
-        std::cout << "User " << uid << " selected representation ";
-        for (unsigned j = 0; j < m_conf->nbQer; ++j)
+        if (c_sol[r] > 0.5)
         {
-          if (s_sol[j] > 0)
+          m_pav->HeatVersion(r);
+          offeredVersion.push_back(r);
+          auto const& version = m_pav->GetAllowedVersionVector()[r];
+          versionSize.push_back(version.GetSize());
+          std::cout << "Version " << r << ": (" << version.GetTheta() << ", " << version.GetPhi() << ", "  << version.GetHDim() << ", "  << version.GetVDim() << ")" << std::endl;
+          IloNumArray s_sol(env);
+          cplex.getValues(s_sol, s[r]);
+          std::cout << "Selected by: " << std::endl;
+          for (unsigned u = 0; u < nbUser; ++u)
           {
-            rep = j;
-            std::cout << j << " ";
+            if (s_sol[u] > 0.5)
+            {
+              std::cout << "u " << u << " visible bit-rate: " << v_b[u][r] << std::endl;
+              m_pav->HeatSelectedVersion(r);
+              optiVisibleB.push_back(v_b[u][r]);
+            }
           }
+          std::cout << "-------" << std::endl;
         }
-        std::cout << std::endl;
-
-      //   unsigned n = 0;
-      //   for (unsigned a = 0; a < nbArea; ++a)
-      //   {
-      //     n += cplex.getValue(created_r[rep][a]);
-      //   }
-      //   std::cout << "n = " << n << " B_qer_val = "<< b_qer_val[n] << " B_out_val = "<< b_out_val[n] << std::endl;
-      //
-      //   for (unsigned n = 0; n <= nbArea; ++n)
-      //   {
-      //     if (cplex.getValue(nb[rep][n]) > 0.5)
-      //     {
-      //       std::cout << "Nb = " << n << " B_qer_val = "<< b_qer_val[n] << " B_out_val = "<< b_out_val[n] << std::endl;
-      //     }
-      //   }
-      //
-      //   std::cout << "With B_qer = " << cplex.getValue(b_qer_j[rep]) << " B_out = "
-      //     <<  cplex.getValue(b_out_j[rep]) << std::endl;
-      //
-      //   double visible = 0;
-      //   double sumV = 0;
-      //
-      //   std::cout << "[";
-      //   for (unsigned j = 0; j < m_conf->nbQer; ++j)
-      //   {
-      //     std::cout << cplex.getValue(usedCreatedRep[j]) << ", ";
-      //   }
-      //   std::cout << "]" << std::endl;
-      //
-      //   for (unsigned a = 0; a < nbArea; ++a)
-      //   {
-      //     // std::cout << "(" << a << ", " << s_sol[rep] << ", (" << cplex.getValue(created_r[rep][a]) << ", "
-      //     //   << cplex.getValue(q_qer[uid][a]) << "), ("<< cplex.getValue(q_b_qer[uid][a])
-      //     //   << ", " << cplex.getValue(q_b_out[uid][a]) << ")) ";
-      //     visible += v[uid][a] * (cplex.getValue(q_b_qer[uid][a]) + cplex.getValue(q_b_out[uid][a]));
-      //     sumV += v[uid][a];
-      //
-      //   }
-      //   std::cout << std::endl;
-      //   std::cout << "Visible: " << visible/sumV << std::endl;
-      //   std::cout << std::endl;
-      //   std::cout << std::endl;
-      // }
-      // for (unsigned j = 0; j < m_conf->nbQer; ++j)
-      // {
-      //   if (cplex.getValue(usedCreatedRep[j]) > 0.5)
-      //   {
-      //     double sqer = 0;
-      //     for (unsigned a = 0; a < nbArea; ++a)
-      //     {
-      //       if (cplex.getValue(created_r[j][a]) > 0.5)
-      //       {
-      //         m_areaSet->AddUseAsQer(a);
-      //       }
-      //       sqer += cplex.getValue(created_r[j][a]) * m_areaSet->GetAreas()[a].GetSurface();
-      //       sqer_vec.push_back(sqer);
-      //     }
-      //     unsigned n = 0;
-      //     for (unsigned a = 0; a < nbArea; ++a)
-      //     {
-      //       n += cplex.getValue(created_r[j][a]);
-      //     }
-      //     n_vec.push_back(int(n));
-      //   }
       }
+      std::uniform_int_distribution<unsigned int> dist(0, offeredVersion.size()-1);
+      for (unsigned u = 0; u < nbUser; ++u)
+      {
+        unsigned int randomR = dist(engine);
+        randomVisibleB.push_back(v_b[u][randomR]);
+        auto startPosition = psi_vid->GetSegments()[u]->GetStartPosition();
+        Float minDist = 100;
+        unsigned rMin = nbVersion;
+        for (auto r: offeredVersion)
+        {
+          auto dist = m_pav->GetAllowedVersionVector()[r].Distance(startPosition);
+          if (minDist > dist)
+          {
+            minDist = dist;
+            rMin = r;
+          }
+          // std::cout << "r " << r << " dist " << dist  << " start " << startPosition << std::endl;
+        }
+        // std::cout << "heuristic: " << rMin << " dist " << minDist << " -> "<< v_b[u][rMin] << std::endl;
+        heuristicVisibleB.push_back(v_b[u][rMin]);
+      }
+      std::cout << "##############" << std::endl;
 
-        cplex.end();
-        model.end();
-        env.end();
 
-        // m_areaSet->WriteStatistics(outputDir+"/results_tmp.txt");
-        //
-        // std::sort(sqer_vec.begin(), sqer_vec.end());
-        // std::sort(n_vec.begin(), n_vec.end());
-        // std::ofstream ofs(outputDir+"/results_sqer_tmp.txt");
-        // ofs << "cdf sqer n\n";
-        // for (double percentile = 0.0; percentile <= 100.0; percentile += 1)
-        // {
-        //   ofs << percentile << " " << Percentile(sqer_vec, percentile) << " " << Percentile(n_vec, percentile) << "\n";
-        // }
-        //
-        // ofs = std::ofstream(outputDir+"/results_status_tmp.txt");
-        // ofs << testCount << " / " << totalTest  << " gap " << m_conf->epGap << " \n";
-        ++testCount;
+      cplex.end();
+      model.end();
+      env.end();
+      ++testCount;
       }
       catch (IloException& e) {
         std::cerr << "Concert exception caught: " << e << std::endl;
@@ -515,18 +495,20 @@ void Optimal::Run(void)
     }
   }
 
-  m_areaSet->WriteStatistics(outputDir+"/results.txt");
-
-  std::sort(sqer_vec.begin(), sqer_vec.end());
-  std::sort(n_vec.begin(), n_vec.end());
-  std::ofstream ofs(outputDir+"/results_sqer.txt");
-  ofs << "cdf sqer n\n";
+  //Write statistic outputs
+  std::ofstream ofs(outputDir+"/results.txt");
+  std::sort(optiVisibleB.begin(), optiVisibleB.end());
+  std::sort(heuristicVisibleB.begin(), heuristicVisibleB.end());
+  std::sort(randomVisibleB.begin(), randomVisibleB.end());
+  std::sort(versionSize.begin(), versionSize.end());
+  ofs << "cdf optiVisibleB heuristicVisibleB randomVisibleB Sqer\n";
   for (double percentile = 0.0; percentile <= 100.0; percentile += 1)
   {
-    ofs << percentile << " " << Percentile(sqer_vec, percentile) << " " << Percentile(n_vec, percentile) << "\n";
+    ofs << percentile << " " << Percentile(optiVisibleB, percentile) << " " << Percentile(heuristicVisibleB, percentile)
+        << " " << Percentile(randomVisibleB, percentile) << " " << Percentile(versionSize, percentile) << "\n";
   }
 
-  ofs = std::ofstream(outputDir+"/results_status.txt");
-  ofs << testCount << " / " << totalTest  << " gap " << m_conf->epGap << " \n";
-  std::cout << "Done" << std::endl;
+  m_pav->WritePosHeatMap(outputDir+"/pos_results.txt");
+  m_pav->WriteDimHeatMap(outputDir+"/dim_results.txt");
+
 }

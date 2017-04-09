@@ -2,6 +2,9 @@
 #include "common/Common.hpp"
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <tuple>
+#include <cmath>
+#include "common/Quaternion.hpp"
 
 namespace IMT {
 typedef  cv::Matx<Float, 3, 3>  RotMat;
@@ -34,10 +37,42 @@ static void printMat(const RotMat& rotMat, std::ostream& os)
   os << " " << rotMat(1,0) << " " << rotMat(1,1) << " " << rotMat(1,2) << " " << std::endl;
   os << " " << rotMat(2,0) << " " << rotMat(2,1) << " " << rotMat(2,2) << ")" << std::endl;
 }
-}
+
 
 inline std::ostream& operator<<(std::ostream& os, const IMT::RotMat& dt)
 {
   IMT::printMat(dt, os);
   return os;
+}
+
+inline std::tuple<Float, Float, Float> RotationMatrixToEulerAngles(const RotMat& R)
+{
+    // assert(isRotationMatrix(R));
+    Float sy = std::sqrt(R(0,0) * R(0,0) +  R(1,0) * R(1,0) );
+
+    bool singular = sy < 1e-6; // If
+
+    Float x, y, z;
+    if (!singular)
+    {
+        x = std::atan2(R(2,1) , R(2,2));
+        y = std::atan2(-R(2,0), sy);
+        z = std::atan2(R(1,0), R(0,0));
+    }
+    else
+    {
+        x = std::atan2(-R(1,2), R(1,1));
+        y = std::atan2(-R(2,0), sy);
+        z = 0;
+    }
+    return std::make_tuple(x, y, z);
+}
+
+inline Quaternion RotationMatrixToQuaternion(const RotMat& R)
+{
+  Float yaw, pitch, roll;
+  std::tie(yaw, pitch, roll) = RotationMatrixToEulerAngles(R);
+  return Quaternion::FromEuler(yaw, pitch, roll);
+}
+
 }

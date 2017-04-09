@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include "common/Quaternion.hpp"
 
 namespace IMT {
 class AreaSet;
@@ -18,6 +19,9 @@ public:
   auto const& GetPhi(void) const {return m_phi;}
   auto const& GetHDim(void) const {return m_hDim;}
   auto const& GetVDim(void) const {return m_vDim;}
+  auto const& GetSize(void) const {return m_size;}
+
+  auto Distance(const Quaternion& userPosition) const {return Quaternion::OrthodromicDistance(Quaternion::FromEuler(m_theta, m_phi, 0.0), userPosition);}
 private:
   std::vector<unsigned int> m_version;
   std::shared_ptr<AreaSet> m_areaSet;
@@ -25,5 +29,6 @@ private:
   float m_phi;
   float m_hDim;
   float m_vDim;
+  float m_size; //surface of the QER
 };
 }
