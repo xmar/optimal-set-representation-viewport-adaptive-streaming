@@ -117,6 +117,7 @@ int main( int argc, const char* argv[] )
       configArgs->pathToOutputDir = ptree.get<std::string>("Global.pathToOutputDir");
       configArgs->useTile = ptree.get<bool>("Global.useTile");
       configArgs->epGap = ptree.get<float>("Global.epGap");
+      configArgs->nbThread = ptree.get<unsigned>("Global.nbThread");
       configArgs->nbTheta = ptree.get<unsigned int>("Global.nbTheta");
       configArgs->nbPhi = ptree.get<unsigned int>("Global.nbPhi");
       configArgs->nbHDim = ptree.get<unsigned int>("Global.nbHDim");

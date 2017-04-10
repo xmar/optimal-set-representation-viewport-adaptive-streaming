@@ -134,7 +134,7 @@ std::tuple<Float,Float> GetSurfaceBitrateQerOut(double Sqer, std::shared_ptr<Con
 void Optimal::Run(void)
 {
 
-  std::string outputDir = m_conf->pathToOutputDir + "/" + std::to_string(m_conf->nbQer)+"_"+ std::to_string(m_conf->nbHPixels)+"x"+std::to_string(m_conf->nbVPixels);
+  std::string outputDir = m_conf->pathToOutputDir + "/" + std::to_string(m_conf->nbQer)+"_"+ std::to_string(m_conf->nbHPixels)+"x"+std::to_string(m_conf->nbVPixels)+"_"+std::to_string(m_conf->minSurfaceBitrate)+"_"+std::to_string(m_conf->maxSurfaceBitrate)+"_"+std::to_string(m_conf->segmentDuration)+"s";
   if (m_conf->useTile)
   {
     outputDir += "Tiled"+ std::to_string(m_conf->nbHTiles)+"x"+std::to_string(m_conf->nbVTiles);
@@ -393,7 +393,7 @@ void Optimal::Run(void)
 
       IloCplex cplex(model);
       cplex.setParam(IloCplex::EpGap, m_conf->epGap);
-      // cplex.setParam(IloCplex::Threads, 1);
+      cplex.setParam(IloCplex::Threads, m_conf->nbThread);
       // cplex.setParam(IloCplex::NodeFileInd,3);
       // cplex.setParam(IloCplex::WorkDir,".");
       // cplex.setParam(IloCplex::MemoryEmphasis,true);

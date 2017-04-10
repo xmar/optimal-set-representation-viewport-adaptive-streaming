@@ -12,6 +12,7 @@ struct ConfigArgs
 {
   unsigned int nbQer;
   float epGap;
+  unsigned int nbThread;
   double segmentDuration;
   double minSurfaceBitrate;
   double maxSurfaceBitrate;
@@ -35,6 +36,7 @@ struct ConfigArgs
 
   ConfigArgs(void): nbQer(0),
                     epGap(0.0),
+                    nbThread(4),
                     segmentDuration(0),
                     minSurfaceBitrate(0),
                     bitrateRatio(0),

@@ -76,6 +76,42 @@ static std::tuple<unsigned int, Float, RotMat> ParseTraceLine(const std::string&
   return std::forward_as_tuple(std::move(positionId), std::move(timestamp), std::move(rotMat));
 }
 
+static std::tuple<Float, Quaternion> ParseTraceLineQuaternion(const std::string& line)
+{
+  std::istringstream ss(line);
+  std::string value;
+  unsigned int counter(0);
+  unsigned int positionId(0);
+  Float timestamp(0.0);
+  Float w, x, y, z;
+  while(std::getline(ss, value, ' '))
+  {
+    if (counter == 0)
+    {
+      timestamp = std::stod(value);
+    }
+    else if (counter == 1)
+    {
+      w = std::stod(value);
+    }
+    else if (counter == 2)
+    {
+      x = std::stod(value);
+    }
+    else if (counter == 3)
+    {
+      y = std::stod(value);
+    }
+    else if (counter == 4)
+    {
+      z = std::stod(value);
+    }
+    ++counter;
+  }
+
+  return std::forward_as_tuple(std::move(timestamp), Quaternion(w, Vector(x, y, z)));
+}
+
 void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horizontalFoVAngle, double verticalFoVAngle, double segmentLengthSeconds)
 {
   auto tracePaths = GetPathToAllTraces(pathToLogFolder);
@@ -115,8 +151,10 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
     {
       unsigned int positionId(0);
       Float timestamps(0.0);
-      RotMat rotMat;
-      std::tie(positionId, timestamps, rotMat) = ParseTraceLine(line);
+      // RotMat rotMat;
+      // std::tie(positionId, timestamps, rotMat) = ParseTraceLine(line);
+      Quaternion position;
+      std::tie(timestamps, position) = ParseTraceLineQuaternion(line);
       if (nextSegTx < timestamps)
       {
         ++seg_id;
@@ -127,9 +165,10 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
       }
       if (!seg->IsStartPositionSet())
       {
-        seg->SetStartPosition(RotationMatrixToQuaternion(rotMat));
+        // seg->SetStartPosition(RotationMatrixToQuaternion(rotMat));
+        seg->SetStartPosition(position);
       }
-      seg->AddVisibility(areaSet.GetVisibility(rotMat, horizontalFoVAngle, verticalFoVAngle));
+      seg->AddVisibility(areaSet.GetVisibility(position, horizontalFoVAngle, verticalFoVAngle));
       hasSomething = true;
     }
     if (hasSomething)
