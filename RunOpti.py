@@ -3,6 +3,7 @@
 import math
 import subprocess as sub
 import os
+import time
 
 if __name__ == '__main__':
 
@@ -52,12 +53,23 @@ viewportVAngle=90
 pathToTraces={pathToPreparedDataset}
 pathToOutputDir={output}
 """
+
+    def PrintStatus(testDone, nbTotalTest, durationSeconds):
+        with open('status.txt', 'w') as o:
+            o.write('{}/{} -> {}%\n'.format(testDone, nbTotalTest, 100*testDone/nbTotalTest))
+            o.write('Spent time: {}s\n'.format(durationSeconds))
+            o.write('Estimated remaining time: {}s\n'.format((nbTotalTest-testDone)*durationSeconds/testDone if testDone != 0 else -1))
+
     #QER variation:
     defaults = {'epGap': epGap, 'nbThread':nbThread, 'nbQer':defaultQerNb,
                 'segSize': defaultSegSize, 'Bmin':bmin, 'Bmax':bmax,
                 'Bratio':bRatio, 'nbTheta':nbTheta, 'nbPhi':nbPhi, 'nbHDim':nbHDim,
                 'nbVDim':nbVDim, 'nbHArea':nbHArea, 'nbVArea':nbVArea,
                 'pathToPreparedDataset':pathToPreparedDataset, 'output':'output/sim_B_12.56'}
+    nbTotalTest = len(QerNbList) + len(SegSizeList) + len(bitrateList)
+    testDone = 0
+    start = time.time()
+    PrintStatus(testDone, nbTotalTest, time.time() - start)
     for nbQer in QerNbList:
         d = defaults.copy()
         d['nbQer'] = nbQer
@@ -67,6 +79,8 @@ pathToOutputDir={output}
         if not os.path.exists(d['output']):
             os.makedirs(d['output'])
         sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+        testDone += 1
+        PrintStatus(testDone, nbTotalTest, time.time() - start)
     for segSize in SegSizeList:
         d = defaults.copy()
         d['segSize'] = segSize
@@ -76,6 +90,8 @@ pathToOutputDir={output}
         if not os.path.exists(d['output']):
             os.makedirs(d['output'])
         sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+        testDone += 1
+        PrintStatus(testDone, nbTotalTest, time.time() - start)
     for bitrate in bitrateList:
         d = defaults.copy()
         d['Bmin'] = bmin/(bitrate/defaultBitrate)
@@ -87,3 +103,5 @@ pathToOutputDir={output}
         if not os.path.exists(d['output']):
             os.makedirs(d['output'])
         sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+        testDone += 1
+        PrintStatus(testDone, nbTotalTest, time.time() - start)
