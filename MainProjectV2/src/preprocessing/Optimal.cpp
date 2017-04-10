@@ -508,6 +508,17 @@ void Optimal::Run(void)
         << " " << Percentile(randomVisibleB, percentile) << " " << Percentile(versionSize, percentile) << "\n";
   }
 
+  ofs = std::ofstream(outputDir+"/results_avg.txt");
+  double avgOpti = 0;
+  double avgHeuri = 0;
+  double avgRandom = 0;
+  double avgSqer = 0;
+  for (auto const& val: optiVisibleB) {avgOpti+=val;} avgOpti/optiVisibleB.size();
+  for (auto const& val: heuristicVisibleB) {avgHeuri+=val;} avgHeuri/heuristicVisibleB.size();
+  for (auto const& val: randomVisibleB) {avgRandom+=val;} avgRandom/randomVisibleB.size();
+  for (auto const& val: versionSize) {avgSqer+=val;} avgSqer/versionSize.size();
+  ofs << avgOpti << " " << avgHeuri << " " << avgRandom << " "  << avgSqer << std::endl;
+
   m_pav->WritePosHeatMap(outputDir+"/pos_results.txt");
   m_pav->WriteDimHeatMap(outputDir+"/dim_results.txt");
 
