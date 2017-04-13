@@ -7,6 +7,7 @@ import queue
 import atomic
 import Pyro4
 import Pyro4.naming
+import argparse
 
 def GetNiceTimeStr(seconds):
     hours, seconds =  seconds // 3600, seconds % 3600
@@ -107,14 +108,14 @@ if __name__ == '__main__':
     SegSizeList = [5, 4.5, 4, 3.5, 3, 2.5, 1.5, 1, 0.5]
     # SegSizeList = [5, 4, 3, 1]
     nbThread = 4
-    nbHArea = 20
-    nbVArea = 20
+    nbHArea = 25
+    nbVArea = 25
     epGap = 0.03
     nbTheta = 17
     nbPhi = 17
     nbHDim = 12
     nbVDim = 12
-    nbMaxUser = 30
+    nbMaxUser = 60
 
 
     masterQueue = MasterQueue()
@@ -124,7 +125,7 @@ if __name__ == '__main__':
                 'segSize': defaultSegSize, 'Bmin':bmin, 'Bmax':bmax,
                 'Bratio':bRatio, 'nbTheta':nbTheta, 'nbPhi':nbPhi, 'nbHDim':nbHDim,
                 'nbVDim':nbVDim, 'nbHArea':nbHArea, 'nbVArea':nbVArea,
-                'pathToPreparedDataset':pathToPreparedDataset, 'output':'output/sim_B_12.56',
+                'pathToPreparedDataset':pathToPreparedDataset, 'output':'output_allUsers/sim_B_12.56',
                 'nbMaxUser':nbMaxUser}
     nbTotalTest = len(QerNbList) + len(SegSizeList) + len(bitrateList)
     testDone = 0
@@ -133,7 +134,7 @@ if __name__ == '__main__':
         d = defaults.copy()
         d['Bmin'] = bmin/(bitrate/defaultBitrate)
         d['Bmax'] = bmax/(bitrate/defaultBitrate)
-        d['output'] = 'output/sim_B_{}'.format(bitrate)
+        d['output'] = 'output_allUsers/sim_B_{}'.format(bitrate)
         relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
                                                                                        d['nbHArea'],
                                                                                        d['nbVArea'],
