@@ -91,6 +91,7 @@ pathToOutputDir={output}
                     uri = ns.lookup('server.masterQueue')
                     masterQueue = Pyro4.Proxy(uri)
                     masterQueue.AddBack(t)
+            print('KeyboardInterrupt')
             sys.exit()
         finally:
             if not done:
