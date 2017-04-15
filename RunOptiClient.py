@@ -85,6 +85,7 @@ pathToOutputDir={output}
         except KeyboardInterrupt:
             if not done:
                 masterQueue.AddBack(t)
+            print('KeyboardInterrupt')
             sys.exit()
         except:
             if not done:
