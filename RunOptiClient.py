@@ -64,7 +64,8 @@ pathToOutputDir={output}
                 o.write(conf)
             if not os.path.exists(d['output']):
                 os.makedirs(d['output'])
-            # sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+            sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+
 
             outputFiles = dict()
             for fileName in ['results.txt', 'results_avg.txt', 'pos_results.txt', 'dim_results.txt']:
