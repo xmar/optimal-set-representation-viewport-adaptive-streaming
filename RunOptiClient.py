@@ -3,6 +3,7 @@
 import math
 import subprocess as sub
 import os
+import sys
 import time
 import Pyro4
 import glob
@@ -81,6 +82,10 @@ pathToOutputDir={output}
                 os.remove(f)
 
             masterQueue.Done(time.time()-startTime, outputFiles)
+        except KeyboardInterrupt:
+            if not done:
+                masterQueue.AddBack(t)
+            sys.exit()
         except:
             if not done:
                 masterQueue.AddBack(t)
