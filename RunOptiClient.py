@@ -81,13 +81,39 @@ pathToOutputDir={output}
             for f in glob.glob(os.path.join(relOutputDir, '*.sol')):
                 os.remove(f)
 
-            masterQueue.Done(time.time()-startTime, outputFiles)
+            done = True
         except KeyboardInterrupt:
             if not done:
-                masterQueue.AddBack(t)
+                try:
+                    masterQueue.AddBack(t)
+                except:
+                    ns = Pyro4.locateNS(host=serverHost)
+                    uri = ns.lookup('server.masterQueue')
+                    masterQueue = Pyro4.Proxy(uri)
+                    masterQueue.AddBack(t)
             sys.exit()
-        except:
+        finally:
             if not done:
-                masterQueue.AddBack(t)
+                try:
+                    masterQueue.AddBack(t)
+                except:
+                    ns = Pyro4.locateNS(host=serverHost)
+                    uri = ns.lookup('server.masterQueue')
+                    masterQueue = Pyro4.Proxy(uri)
+                    masterQueue.AddBack(t)
+            else:
+                try:
+                    masterQueue.Done(time.time()-startTime, outputFiles)
+                except:
+                    ns = Pyro4.locateNS(host=serverHost)
+                    uri = ns.lookup('server.masterQueue')
+                    masterQueue = Pyro4.Proxy(uri)
+                    masterQueue.Done(time.time()-startTime, outputFiles)
 
-        t = masterQueue.Get()
+        try:
+            t = masterQueue.Get()
+        except:
+            ns = Pyro4.locateNS(host=serverHost)
+            uri = ns.lookup('server.masterQueue')
+            masterQueue = Pyro4.Proxy(uri)
+            t = masterQueue.Get()
