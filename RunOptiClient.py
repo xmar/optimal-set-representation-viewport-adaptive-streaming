@@ -54,29 +54,34 @@ pathToOutputDir={output}
     t = masterQueue.Get()
     while t is not None:
         d, relOutputDir, absOutputDir = t
-        startTime = time.time()
-        # print(d, relOutputDir, absOutputDir, startTime)
+        done = False
+        try:
+            startTime = time.time()
+            # print(d, relOutputDir, absOutputDir, startTime)
 
-        conf = template.format(**d)
-        with open('tmpConfig.ini', 'w') as o:
-            o.write(conf)
-        if not os.path.exists(d['output']):
-            os.makedirs(d['output'])
-        # sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
+            conf = template.format(**d)
+            with open('tmpConfig.ini', 'w') as o:
+                o.write(conf)
+            if not os.path.exists(d['output']):
+                os.makedirs(d['output'])
+            # sub.check_call([optimalSoftPath, '-c', 'tmpConfig.ini'])
 
-        outputFiles = dict()
-        for fileName in ['results.txt', 'results_avg.txt', 'pos_results.txt', 'dim_results.txt']:
-            filePath = os.path.join(relOutputDir, fileName)
-            if os.path.exists(filePath):
-                f = ''
-                with open(filePath, 'r') as i:
-                    for line in i:
-                        f += line
-                outputFiles[filePath] = f
+            outputFiles = dict()
+            for fileName in ['results.txt', 'results_avg.txt', 'pos_results.txt', 'dim_results.txt']:
+                filePath = os.path.join(relOutputDir, fileName)
+                if os.path.exists(filePath):
+                    f = ''
+                    with open(filePath, 'r') as i:
+                        for line in i:
+                            f += line
+                    outputFiles[filePath] = f
 
-        for f in glob.glob(os.path.join(relOutputDir, '*.sol')):
-            os.remove(f)
+            for f in glob.glob(os.path.join(relOutputDir, '*.sol')):
+                os.remove(f)
 
-        masterQueue.Done(time.time()-startTime, outputFiles)
+            masterQueue.Done(time.time()-startTime, outputFiles)
+        except:
+            if not done:
+                masterQueue.AddBack(t)
 
         t = masterQueue.Get()

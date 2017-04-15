@@ -56,6 +56,12 @@ class MasterQueue:
         self.queue.put((*arg,))
 
     @Pyro4.expose
+    def AddBack(self, t):
+        self.nbWorkingTest -= 1
+        print('Add back a job, {} jobs are being executed'.format(self.nbWorkingTest.value))
+        self.queue.put(t)
+
+    @Pyro4.expose
     def Get(self):
         try:
             t = self.queue.get(block=False)
