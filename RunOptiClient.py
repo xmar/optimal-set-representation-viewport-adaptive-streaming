@@ -56,6 +56,7 @@ pathToOutputDir={output}
     while t is not None:
         d, relOutputDir, absOutputDir = t
         done = False
+        addBack = True
         try:
             startTime = time.time()
             # print(d, relOutputDir, absOutputDir, startTime)
@@ -83,6 +84,7 @@ pathToOutputDir={output}
 
             done = True
         except KeyboardInterrupt:
+            addBack = False
             if not done:
                 try:
                     masterQueue.AddBack(t)
@@ -95,13 +97,14 @@ pathToOutputDir={output}
             sys.exit()
         finally:
             if not done:
-                try:
-                    masterQueue.AddBack(t)
-                except:
-                    ns = Pyro4.locateNS(host=serverHost)
-                    uri = ns.lookup('server.masterQueue')
-                    masterQueue = Pyro4.Proxy(uri)
-                    masterQueue.AddBack(t)
+                if addBack:
+                    try:
+                        masterQueue.AddBack(t)
+                    except:
+                        ns = Pyro4.locateNS(host=serverHost)
+                        uri = ns.lookup('server.masterQueue')
+                        masterQueue = Pyro4.Proxy(uri)
+                        masterQueue.AddBack(t)
             else:
                 try:
                     masterQueue.Done(time.time()-startTime, outputFiles)
