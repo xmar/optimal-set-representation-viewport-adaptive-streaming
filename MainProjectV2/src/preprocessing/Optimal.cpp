@@ -203,6 +203,10 @@ void Optimal::Run(void)
   {
     for (auto segmentId: m_psi->GetSegIdVect(videoId))
     {
+      if (videoId == "Rollercoaster-8lsB-P8nGSM" && segmentId == "0")
+      {
+        continue;
+      }
       std::cout << "Start optimization for " << videoId << " segment " << segmentId << std::endl;
 
       IloEnv env;
