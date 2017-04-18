@@ -32,9 +32,11 @@ def PrintStatus(testDone, nbTotalTest, durationList):
         durationSeconds = sum(durationList)
         hours, seconds =  durationSeconds // 3600, durationSeconds % 3600
         minutes, seconds = seconds // 60, seconds % 60
-        o.write('Spent time: {}\n'.format(GetNiceTimeStr(durationSeconds)))
+        o.write('Total Spent time: {}\n'.format(GetNiceTimeStr(durationSeconds)))
+        o.write('Average Spent time per test: {}\n'.format(GetNiceTimeStr(durationSeconds/len(durationList)) if len(durationList) > 0 else -1))
         o.write('Estimated remaining time: {}\n'.format(GetNiceTimeStr((nbTotalTest-testDone)*durationSeconds/len(durationList) if len(durationList) != 0 else 0)))
-        print('Spent time: {}'.format(GetNiceTimeStr(durationSeconds)))
+        print('Total Spent time: {}'.format(GetNiceTimeStr(durationSeconds)))
+        print('Average Spent time per test: {}'.format(GetNiceTimeStr(durationSeconds/len(durationList)) if len(durationList) > 0 else -1))
         print('Estimated remaining time: {}\n'.format(GetNiceTimeStr((nbTotalTest-testDone)*durationSeconds/len(durationList) if len(durationList) != 0 else 0)))
 
 
@@ -102,21 +104,21 @@ if __name__ == '__main__':
     pathToPreparedDataset = '../tracks_newDataset'
 
     defaultBitrate = 4*math.pi
-    # bitrateList = [defaultBitrate, 5.75, 7, 8, 10, 15, 20, 25]
-    bitrateList = [defaultBitrate]
+    bitrateList = [defaultBitrate, 6, 7, 8, 10, 15, 20, 25]
+    # bitrateList = [defaultBitrate]
     bmin = 0.45
     bmax = 2.1
     bRatio = 3.5
     defaultQerNb = 4
     # QerNbList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    # QerNbList = [11, 10, 9, 8, 7, 6, 5, 3, 2, 1]
-    QerNbList = []
+    QerNbList = [11, 10, 9, 8, 7, 6, 5, 3, 2, 1]
+    # QerNbList = []
     defaultSegSize = 2
     # SegSizeList = [0.5, 1, 1.5, 2.5, 3, 3.5, 4, 4.5, 5]
-    # SegSizeList = [5, 4.5, 4, 3.5, 3, 2.5, 1.5, 1, 0.5]
-    SegSizeList = []
+    SegSizeList = [5, 4.5, 4, 3.5, 3, 2.5, 1.5, 1, 0.5]
+    # SegSizeList = []
     # SegSizeList = [5, 4, 3, 1]
-    nbThread = 4
+    nbThread = 1
     nbHArea = 20
     nbVArea = 20
     epGap = 0.03

@@ -208,13 +208,13 @@ void Optimal::Run(void)
       IloEnv env;
       IloModel model(env);
 
+      bool cancelSegment = false;
+
       unsigned nbArea = m_areaSet->GetAreas().size();
       auto psi_vid = m_psi->FilterVidSegId(videoId, segmentId);
       unsigned nbUser = std::min(unsigned(psi_vid->GetSegments().size()), m_conf->nbMaxUser);
       unsigned nbVersion = m_pav->GetAllowedVersionVector().size();
       unsigned nbMaxVersion = m_conf->nbQer;
-
-      videoId_segId.push_back(std::make_tuple(videoId, segmentId));
 
       try{
         std::cout << "Init constants" << std::endl;
@@ -270,6 +270,8 @@ void Optimal::Run(void)
         double max_b_out(0.0);
         double min_b_qer(4*PI);
         double min_b_out(4*PI);
+        double max_sqer(0.0);
+        double min_sqer(4*PI);
         for (unsigned r = 0; r < nbVersion; ++r)
         {
           double Squer(0.0);
@@ -282,6 +284,11 @@ void Optimal::Run(void)
           }
           double b_qer(0); double b_out(0);
           std::tie(b_qer,b_out) = GetSurfaceBitrateQerOut(Squer, m_conf);
+          if (b_qer == 0 && b_out == 0)
+          {
+            std::cout << "Cancel this segment !!! " << std::endl << std::endl;
+            cancelSegment = true;
+          }
 
           for (unsigned u = 0; u < nbUser; ++u)
           {
@@ -306,12 +313,19 @@ void Optimal::Run(void)
 
           max_b_qer = std::max(max_b_qer, b_qer);
           max_b_out = std::max(max_b_out, b_out);
+          max_sqer = std::max(max_sqer, Squer);
           min_b_qer = std::min(min_b_qer, b_qer);
           min_b_out = std::min(min_b_out, b_out);
+          min_sqer = std::min(min_sqer, Squer);
         }
         v.end();
 
+        if (!cancelSegment) {
+        videoId_segId.push_back(std::make_tuple(videoId, segmentId));
         std::cout << "Nb views = " << psi_vid->NbView() << std::endl;
+        std::cout << "Min b_qer = " << min_b_qer << "; Max b_qer = " << max_b_qer << std::endl;
+        std::cout << "Min b_out = " << min_b_out << "; Max b_out = " << max_b_out << std::endl;
+        std::cout << "Min Sqer = " << min_sqer << "; Max Sqer = " << max_sqer << std::endl;
 
 
         //Create variables
@@ -514,6 +528,7 @@ void Optimal::Run(void)
       cplex.end();
       model.end();
       env.end();
+    }
       ++testCount;
       }
       catch (IloException& e) {
@@ -558,10 +573,10 @@ void Optimal::Run(void)
   double avgHeuri = 0;
   double avgRandom = 0;
   double avgSqer = 0;
-  for (auto const& val: optiVisibleB) {avgOpti+=val;} avgOpti/optiVisibleB.size();
-  for (auto const& val: heuristicVisibleB) {avgHeuri+=val;} avgHeuri/heuristicVisibleB.size();
-  for (auto const& val: randomVisibleB) {avgRandom+=val;} avgRandom/randomVisibleB.size();
-  for (auto const& val: versionSize) {avgSqer+=val;} avgSqer/versionSize.size();
+  for (auto const& val: optiVisibleB) {avgOpti+=val;} avgOpti /= optiVisibleB.size();
+  for (auto const& val: heuristicVisibleB) {avgHeuri+=val;} avgHeuri /= heuristicVisibleB.size();
+  for (auto const& val: randomVisibleB) {avgRandom+=val;} avgRandom /= randomVisibleB.size();
+  for (auto const& val: versionSize) {avgSqer+=val;} avgSqer /= versionSize.size();
   ofs << avgOpti << " " << avgHeuri << " " << avgRandom << " "  << avgSqer << std::endl;
 
   m_pav->WritePosHeatMap(outputDir+"/pos_results.txt");

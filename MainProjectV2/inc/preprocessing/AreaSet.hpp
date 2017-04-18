@@ -17,24 +17,35 @@ public:
     {}
   bool Intersection(const RotMat& rotMat, double horizontalFoVAngle, double verticalFoVAngle) const
   {
-    auto y = std::sqrt(1-std::cos(horizontalFoVAngle));
-    auto z = std::sqrt(1-std::cos(verticalFoVAngle));
-    auto a = Coord3dCart(1, y, z);
-    auto b = Coord3dCart(1, y, -z);
-    auto c = Coord3dCart(1, -y, -z);
-    auto d = Coord3dCart(1, -y, z);
+    // auto y = std::sqrt(1-std::cos(horizontalFoVAngle));
+    // auto z = std::sqrt(1-std::cos(verticalFoVAngle));
+    // auto a = Coord3dCart(1, y, z);
+    // auto b = Coord3dCart(1, y, -z);
+    // auto c = Coord3dCart(1, -y, -z);
+    // auto d = Coord3dCart(1, -y, z);
+
     // compute inward normal to the delimitation plan
-    auto n_ab = a ^ b;
-    n_ab = n_ab/norm(n_ab);
-    auto n_bc = b ^ c;
-    n_bc = n_bc/norm(n_bc);
-    auto n_cd = c ^ d;
-    n_cd = n_cd/norm(n_cd);
-    auto n_da = d ^ a;
-    n_da = n_da/norm(n_da);
+    // auto n_ab = a ^ b;
+    // n_ab = n_ab/norm(n_ab);
+    // auto n_bc = b ^ c;
+    // n_bc = n_bc/norm(n_bc);
+    // auto n_cd = c ^ d;
+    // n_cd = n_cd/norm(n_cd);
+    // auto n_da = d ^ a;
+    // n_da = n_da/norm(n_da);
+    // Coord3dCart refPixelPos = Rotation(Coord3dSpherical(1, m_theta, m_phi), rotMat.inv());
+    // return refPixelPos * n_ab >= 0 && refPixelPos * n_bc >= 0 &&
+    //        refPixelPos * n_cd >= 0 && refPixelPos * n_da >= 0;
     Coord3dCart refPixelPos = Rotation(Coord3dSpherical(1, m_theta, m_phi), rotMat.inv());
-    return refPixelPos * n_ab >= 0 && refPixelPos * n_bc >= 0 &&
-           refPixelPos * n_cd >= 0 && refPixelPos * n_da >= 0;
+    Coord3dCart oxy = refPixelPos; oxy.z = 0; oxy = oxy / norm(oxy);
+    Coord3dCart oxz = refPixelPos; oxz.y = 0; oxz = oxz / norm(oxz);
+    Coord3dCart ox(1, 0, 0);
+    auto hAngle = std::acos(ox * oxy);
+    auto vAngle = std::acos(oxy * oxz);
+    return (hAngle <= horizontalFoVAngle/2.0) && (vAngle < verticalFoVAngle / 2.0);
+
+    //Projection on (0, X, Y)
+
   }
 
   bool Intersection(const Quaternion& userPosition, double horizontalFoVAngle, double verticalFoVAngle) const

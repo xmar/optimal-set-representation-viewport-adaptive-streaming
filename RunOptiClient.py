@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     serverHost = args.serverHost
 
-    optimalSoftPath = './build/preprocessingV2'
+    optimalSoftPath = './build2/preprocessingV2'
 
     template = """[Global]
 selectionPerSegment=true
@@ -38,7 +38,7 @@ nbPhi={nbPhi}
 nbHDim={nbHDim}
 nbVDim={nbVDim}
 dimMin=0.1
-dimMax=0.6
+dimMax=0.8
 nbHPixels={nbHArea}
 nbVPixels={nbVArea}
 viewportHAngle=110

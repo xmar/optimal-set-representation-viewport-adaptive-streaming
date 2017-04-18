@@ -10,7 +10,7 @@ Version::Version(std::shared_ptr<AreaSet> areaSet, float theta, float phi, float
   auto rotMat = GetRotMatrice(theta, phi, 0);
   for (auto const& area: m_areaSet->GetAreas())
   {
-    if (area.Intersection(rotMat, hDim, vDim))
+    if (area.Intersection(rotMat.inv(), hDim, vDim))
     {
       m_version.push_back(1);
       m_size += area.GetSurface();
