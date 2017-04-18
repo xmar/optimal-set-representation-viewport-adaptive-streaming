@@ -102,27 +102,33 @@ if __name__ == '__main__':
     pathToPreparedDataset = '../tracks_newDataset'
 
     defaultBitrate = 4*math.pi
-    bitrateList = [defaultBitrate, 5.75, 7, 8, 10, 15, 20, 25]
+    # bitrateList = [defaultBitrate, 5.75, 7, 8, 10, 15, 20, 25]
+    bitrateList = [defaultBitrate]
     bmin = 0.45
     bmax = 2.1
     bRatio = 3.5
     defaultQerNb = 4
     # QerNbList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    QerNbList = [11, 10, 9, 8, 7, 6, 5, 3, 2, 1]
+    # QerNbList = [11, 10, 9, 8, 7, 6, 5, 3, 2, 1]
+    QerNbList = []
     defaultSegSize = 2
     # SegSizeList = [0.5, 1, 1.5, 2.5, 3, 3.5, 4, 4.5, 5]
-    SegSizeList = [5, 4.5, 4, 3.5, 3, 2.5, 1.5, 1, 0.5]
+    # SegSizeList = [5, 4.5, 4, 3.5, 3, 2.5, 1.5, 1, 0.5]
+    SegSizeList = []
     # SegSizeList = [5, 4, 3, 1]
     nbThread = 4
-    nbHArea = 25
-    nbVArea = 25
+    nbHArea = 20
+    nbVArea = 20
     epGap = 0.03
     nbTheta = 17
     nbPhi = 17
     nbHDim = 12
     nbVDim = 12
     nbMaxUser = 60
+    # inputVideoListList = ['']
+    inputVideoListList = ['Rollercoaster-8lsB-P8nGSM', 'Diving-2OzlksZBTiA']
 
+    baseOutputDir = 'output_PerVideo'
 
     masterQueue = MasterQueue()
 
@@ -131,50 +137,59 @@ if __name__ == '__main__':
                 'segSize': defaultSegSize, 'Bmin':bmin, 'Bmax':bmax,
                 'Bratio':bRatio, 'nbTheta':nbTheta, 'nbPhi':nbPhi, 'nbHDim':nbHDim,
                 'nbVDim':nbVDim, 'nbHArea':nbHArea, 'nbVArea':nbVArea,
-                'pathToPreparedDataset':pathToPreparedDataset, 'output':'output_allUsers/sim_B_12.56',
-                'nbMaxUser':nbMaxUser}
-    nbTotalTest = len(QerNbList) + len(SegSizeList) + len(bitrateList)
+                'pathToPreparedDataset':pathToPreparedDataset, 'output':'{}/sim_B_{}'.format(baseOutputDir, defaultBitrate),
+                'nbMaxUser':nbMaxUser, 'inputVideoList':''}
+    nbTotalTest = 0
     testDone = 0
-    PrintStatus(testDone, nbTotalTest, [])
-    for bitrate in bitrateList:
-        d = defaults.copy()
-        d['Bmin'] = bmin/(bitrate/defaultBitrate)
-        d['Bmax'] = bmax/(bitrate/defaultBitrate)
-        d['output'] = 'output_allUsers/sim_B_{}'.format(bitrate)
-        relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
-                                                                                       d['nbHArea'],
-                                                                                       d['nbVArea'],
-                                                                                       d['Bmin'],
-                                                                                       d['Bmax'],
-                                                                                       d['segSize']))
-        absOutputDir = os.path.join(os.getcwd(), relOutputDir)
-        if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
-            masterQueue.Add(d, relOutputDir, absOutputDir)
-    for segSize in SegSizeList:
-        d = defaults.copy()
-        d['segSize'] = segSize
-        relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
-                                                                                       d['nbHArea'],
-                                                                                       d['nbVArea'],
-                                                                                       d['Bmin'],
-                                                                                       d['Bmax'],
-                                                                                       d['segSize']))
-        absOutputDir = os.path.join(os.getcwd(), relOutputDir)
-        if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
-            masterQueue.Add(d, relOutputDir, absOutputDir)
-    for nbQer in QerNbList:
-        d = defaults.copy()
-        d['nbQer'] = nbQer
-        relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
-                                                                                       d['nbHArea'],
-                                                                                       d['nbVArea'],
-                                                                                       d['Bmin'],
-                                                                                       d['Bmax'],
-                                                                                       d['segSize']))
-        absOutputDir = os.path.join(os.getcwd(), relOutputDir)
-        if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
-            masterQueue.Add(d, relOutputDir, absOutputDir)
+    for inputVideoList in inputVideoListList:
+        defaults['inputVideoList'] = inputVideoList
+        defaults['output'] = '{}/sim_B_{}{}'.format(baseOutputDir, defaultBitrate,
+                                                                 '_{}'.format(inputVideoList.replace(',', '_')) if len(inputVideoList) > 0 else '')
+        for bitrate in bitrateList:
+            d = defaults.copy()
+            d['Bmin'] = bmin/(bitrate/defaultBitrate)
+            d['Bmax'] = bmax/(bitrate/defaultBitrate)
+            d['output'] = '{}/sim_B_{}{}'.format(baseOutputDir, bitrate,
+                                                 '_{}'.format(inputVideoList.replace(',', '_')) if len(inputVideoList) > 0 else '')
+            relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
+                                                                                           d['nbHArea'],
+                                                                                           d['nbVArea'],
+                                                                                           d['Bmin'],
+                                                                                           d['Bmax'],
+                                                                                           d['segSize']))
+            absOutputDir = os.path.join(os.getcwd(), relOutputDir)
+            if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
+                masterQueue.Add(d, relOutputDir, absOutputDir)
+                nbTotalTest += 1
+        for segSize in SegSizeList:
+            d = defaults.copy()
+            d['segSize'] = segSize
+            relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
+                                                                                           d['nbHArea'],
+                                                                                           d['nbVArea'],
+                                                                                           d['Bmin'],
+                                                                                           d['Bmax'],
+                                                                                           d['segSize']))
+            absOutputDir = os.path.join(os.getcwd(), relOutputDir)
+            if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
+                masterQueue.Add(d, relOutputDir, absOutputDir)
+                nbTotalTest += 1
+        for nbQer in QerNbList:
+            d = defaults.copy()
+            d['nbQer'] = nbQer
+            relOutputDir = os.path.join(d['output'], '{}_{}x{}_{:.6f}_{:.6f}_{:.6f}s'.format(d['nbQer'],
+                                                                                           d['nbHArea'],
+                                                                                           d['nbVArea'],
+                                                                                           d['Bmin'],
+                                                                                           d['Bmax'],
+                                                                                           d['segSize']))
+            absOutputDir = os.path.join(os.getcwd(), relOutputDir)
+            if not os.path.exists(os.path.join(absOutputDir, 'results.txt')):
+                masterQueue.Add(d, relOutputDir, absOutputDir)
+                nbTotalTest += 1
 
+
+    PrintStatus(testDone, nbTotalTest, [])
     # Start pyros
     # with sub.Popen(['python3', '-m', 'Pyro4.naming', '-n', serverHost]) as nsProc:
     daemon = Pyro4.Daemon(host=serverHost)                # make a Pyro daemon

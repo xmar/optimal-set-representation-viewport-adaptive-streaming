@@ -19,7 +19,7 @@ public:
   m_segments()
  {}
 
- void Init(std::string pathToLogFolder, const AreaSet& areaSet, double horizontalFoVAngle, double verticalFoVAngle, double segmentLengthSeconds);
+ void Init(std::string pathToLogFolder, const AreaSet& areaSet, double horizontalFoVAngle, double verticalFoVAngle, double segmentLengthSeconds, std::vector<std::string> videoList);
 
  auto const& GetSegments(void) const {return m_segments;}
  unsigned NbView(void) const {unsigned c(0); for(auto const& s: m_segments) {c += s->GetVisibilityVect().size();} return c;}

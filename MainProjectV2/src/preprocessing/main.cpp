@@ -40,6 +40,7 @@
 #endif
 
 #include <string>
+#include <sstream>
 #include <memory>
 
 #include "common/Common.hpp"
@@ -124,6 +125,14 @@ int main( int argc, const char* argv[] )
       configArgs->nbVDim = ptree.get<unsigned int>("Global.nbVDim");
       configArgs->dimMin = ptree.get<double>("Global.dimMin");
       configArgs->dimMax = ptree.get<double>("Global.dimMax");
+      configArgs->nbMaxUser = ptree.get<unsigned int>("Global.nbMaxUser");
+      auto inputVideoListStr = ptree.get<std::string>("Global.inputVideoList");
+      std::istringstream ss(inputVideoListStr);
+      std::string value;
+      while(std::getline(ss, value, ','))
+      {
+        configArgs->inputVideoList.push_back(value);
+      }
       if (configArgs->useTile)
       {
         configArgs->nbHTiles = ptree.get<unsigned>("Tiles.nbHTiles");
@@ -140,7 +149,7 @@ int main( int argc, const char* argv[] )
       std::cout << "PrecomputedAllowedVersion initialised" << std::endl;
 
       auto psi = std::make_shared<PrecomputeSegmentsIntersections>();
-      psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration);
+      psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration, configArgs->inputVideoList);
       std::cout << "Number of segment: " << psi->GetSegments().size() << std::endl;
       std::cout << "Number of timestamps: " << psi->NbView() << std::endl;
 

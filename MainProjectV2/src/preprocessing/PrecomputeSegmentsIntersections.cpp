@@ -11,7 +11,7 @@ using PSI = PrecomputeSegmentsIntersections;
 
 namespace fs = boost::filesystem;
 
-static std::vector<std::string> GetPathToAllTraces(const std::string& m_pathToTraces)
+static std::vector<std::string> GetPathToAllTraces(const std::string& m_pathToTraces, std::vector<std::string> videoList)
 {
   std::vector<std::string> tracePaths;
   if (fs::is_directory(m_pathToTraces))
@@ -29,8 +29,21 @@ static std::vector<std::string> GetPathToAllTraces(const std::string& m_pathToTr
       }
       if (!fs::is_directory(it->path()))
       {
-
-        tracePaths.push_back(it->path().string());
+        bool usePath = videoList.empty();
+        std::string outPath = it->path().string();
+        for (auto const& vid: videoList)
+        {
+          auto found = outPath.find(vid);
+          if (found != std::string::npos)
+          {
+            usePath = true;
+            break;
+          }
+        }
+        if (usePath)
+        {
+          tracePaths.push_back(outPath);
+        }
       }
     }
   }
@@ -112,9 +125,9 @@ static std::tuple<Float, Quaternion> ParseTraceLineQuaternion(const std::string&
   return std::forward_as_tuple(std::move(timestamp), Quaternion(w, Vector(x, y, z)));
 }
 
-void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horizontalFoVAngle, double verticalFoVAngle, double segmentLengthSeconds)
+void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horizontalFoVAngle, double verticalFoVAngle, double segmentLengthSeconds, std::vector<std::string> videoList)
 {
-  auto tracePaths = GetPathToAllTraces(pathToLogFolder);
+  auto tracePaths = GetPathToAllTraces(pathToLogFolder, videoList);
   for (auto& path: tracePaths)
   {
     std::vector<std::string> elems;

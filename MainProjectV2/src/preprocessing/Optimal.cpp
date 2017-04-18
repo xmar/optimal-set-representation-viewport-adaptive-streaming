@@ -137,7 +137,7 @@ void Optimal::Run(void)
   std::string outputDir = m_conf->pathToOutputDir + "/" + std::to_string(m_conf->nbQer)+"_"+ std::to_string(m_conf->nbHPixels)+"x"+std::to_string(m_conf->nbVPixels)+"_"+std::to_string(m_conf->minSurfaceBitrate)+"_"+std::to_string(m_conf->maxSurfaceBitrate)+"_"+std::to_string(m_conf->segmentDuration)+"s";
   if (m_conf->useTile)
   {
-    outputDir += "Tiled"+ std::to_string(m_conf->nbHTiles)+"x"+std::to_string(m_conf->nbVTiles);
+    outputDir += "_Tiled"+ std::to_string(m_conf->nbHTiles)+"x"+std::to_string(m_conf->nbVTiles);
   }
 
   if (!fs::is_directory(m_conf->pathToOutputDir))
@@ -147,6 +147,12 @@ void Optimal::Run(void)
   if (!fs::is_directory(outputDir))
   {
     fs::create_directory(outputDir);
+  }
+
+  if (fs::exists(outputDir+"/results.txt"))
+  {
+    std::cout << "Result already exist for this scenario: "<< outputDir << std::endl;
+    return;
   }
 
   std::vector<double> sqer_vec;
@@ -186,6 +192,7 @@ void Optimal::Run(void)
 
 
   //Vector that store the solutions
+  std::vector<std::tuple<std::string, std::string>> videoId_segId;
   std::vector<double> optiVisibleB;
   std::vector<double> heuristicVisibleB;
   std::vector<double> randomVisibleB;
@@ -203,9 +210,11 @@ void Optimal::Run(void)
 
       unsigned nbArea = m_areaSet->GetAreas().size();
       auto psi_vid = m_psi->FilterVidSegId(videoId, segmentId);
-      unsigned nbUser = psi_vid->GetSegments().size();
+      unsigned nbUser = std::min(unsigned(psi_vid->GetSegments().size()), m_conf->nbMaxUser);
       unsigned nbVersion = m_pav->GetAllowedVersionVector().size();
       unsigned nbMaxVersion = m_conf->nbQer;
+
+      videoId_segId.push_back(std::make_tuple(videoId, segmentId));
 
       try{
         std::cout << "Init constants" << std::endl;
@@ -277,9 +286,21 @@ void Optimal::Run(void)
           for (unsigned u = 0; u < nbUser; ++u)
           {
             auto sum = IloSum(v[u]);
-            for (auto a = 0; a < nbArea; ++a)
+            if (sum > 0)
             {
-              v_b[u][r] += v[u][a] * (m_pav->GetAllowedVersionVector()[r][a] == 1 ? b_qer : b_out) / sum;
+              for (auto a = 0; a < nbArea; ++a)
+              {
+                v_b[u][r] += v[u][a] * (m_pav->GetAllowedVersionVector()[r][a] == 1 ? b_qer : b_out) / sum;
+              }
+            }
+            else
+            {
+              v_b[u][r] += 0;
+            }
+            if (! (v_b[u][r] == v_b[u][r]))
+            {
+              std::cout << "Error: Visible bitrate for user "<<u<<" and representation "<<r<< " is not a number" << std::endl;
+              v_b[u][r] = 0;
             }
           }
 
@@ -440,7 +461,16 @@ void Optimal::Run(void)
           m_pav->HeatVersion(r);
           offeredVersion.push_back(r);
           auto const& version = m_pav->GetAllowedVersionVector()[r];
-          versionSize.push_back(version.GetSize());
+          double Squer(0.0);
+          for (auto a = 0; a < nbArea; ++a)
+          {
+            if (m_pav->GetAllowedVersionVector()[r][a] == 1)
+            {
+              Squer += 4*PI/nbArea;
+            }
+          }
+          // versionSize.push_back(version.GetSize());
+          versionSize.push_back(Squer);
           std::cout << "Version " << r << ": (" << version.GetTheta() << ", " << version.GetPhi() << ", "  << version.GetHDim() << ", "  << version.GetVDim() << ")" << std::endl;
           IloNumArray s_sol(env);
           cplex.getValues(s_sol, s[r]);
@@ -461,7 +491,7 @@ void Optimal::Run(void)
       for (unsigned u = 0; u < nbUser; ++u)
       {
         unsigned int randomR = dist(engine);
-        randomVisibleB.push_back(v_b[u][randomR]);
+        randomVisibleB.push_back(v_b[u][offeredVersion[randomR]]);
         auto startPosition = psi_vid->GetSegments()[u]->GetStartPosition();
         Float minDist = 100;
         unsigned rMin = nbVersion;
@@ -507,6 +537,21 @@ void Optimal::Run(void)
     ofs << percentile << " " << Percentile(optiVisibleB, percentile) << " " << Percentile(heuristicVisibleB, percentile)
         << " " << Percentile(randomVisibleB, percentile) << " " << Percentile(versionSize, percentile) << "\n";
   }
+
+  ofs = std::ofstream(outputDir+"/results_raw.txt");
+  ofs << "optiVisibleB heuristicVisibleB randomVisibleB\n";
+  for (unsigned int i = 0; i < optiVisibleB.size(); ++i)
+  {
+    ofs << optiVisibleB[i] << " " << heuristicVisibleB[i] << " " << randomVisibleB[i] << "\n";
+  }
+
+  ofs = std::ofstream(outputDir+"/results_raw_size.txt");
+  ofs << "Sqer\n";
+  for (unsigned int i = 0; i < versionSize.size(); ++i)
+  {
+    ofs << versionSize[i] << "\n";
+  }
+
 
   ofs = std::ofstream(outputDir+"/results_avg.txt");
   double avgOpti = 0;

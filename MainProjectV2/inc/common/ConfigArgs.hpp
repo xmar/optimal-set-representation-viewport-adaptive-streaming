@@ -5,6 +5,7 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/version.hpp>
 #include <sstream>
+#include <vector>
 
 namespace IMT {
 
@@ -29,8 +30,10 @@ struct ConfigArgs
   unsigned int nbPhi;
   unsigned int nbHDim;
   unsigned int nbVDim;
+  unsigned int nbMaxUser;
   double dimMin;
   double dimMax;
+  std::vector<std::string> inputVideoList;
   std::string pathToTraces;
   std::string pathToOutputDir;
 
@@ -53,8 +56,10 @@ struct ConfigArgs
                     nbPhi(0),
                     nbHDim(0),
                     nbVDim(0),
+                    nbMaxUser(0),
                     dimMin(0),
                     dimMax(0),
+                    inputVideoList(),
                     pathToTraces(),
                     pathToOutputDir() {}
 

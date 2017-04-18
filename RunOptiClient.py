@@ -44,6 +44,7 @@ nbVPixels={nbVArea}
 viewportHAngle=110
 viewportVAngle=90
 nbMaxUser={nbMaxUser}
+inputVideoList={inputVideoList}
 pathToTraces={pathToPreparedDataset}
 pathToOutputDir={output}
 """
