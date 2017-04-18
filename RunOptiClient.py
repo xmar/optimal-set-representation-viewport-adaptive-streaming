@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     serverHost = args.serverHost
 
-    optimalSoftPath = './build2/preprocessingV2'
+    optimalSoftPath = './build/preprocessingV2'
 
     template = """[Global]
 selectionPerSegment=true
