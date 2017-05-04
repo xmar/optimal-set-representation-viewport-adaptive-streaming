@@ -198,6 +198,11 @@ void Optimal::Run(void)
   std::vector<double> randomVisibleB;
   std::vector<double> versionSize;
 
+  //GeneratedVersionInfo
+  std::vector<std::vector<unsigned long>> m_generatedVersionPerSegment;
+  std::vector<std::vector<std::vector<double>>> m_qualityPerUserPerSegment;
+  std::vector<std::vector<unsigned long>> m_selectedSegPerUserPerSegment;
+
   //Start processing loop
   for(auto videoId: m_psi->GetVideoIdVect())
   {
@@ -219,6 +224,12 @@ void Optimal::Run(void)
       unsigned nbUser = std::min(unsigned(psi_vid->GetSegments().size()), m_conf->nbMaxUser);
       unsigned nbVersion = m_pav->GetAllowedVersionVector().size();
       unsigned nbMaxVersion = m_conf->nbQer;
+
+      while(m_qualityPerUserPerSegment.size() < nbUser)
+      {
+        m_qualityPerUserPerSegment.push_back(std::vector<std::vector<double>>());
+        m_selectedSegPerUserPerSegment.push_back(std::vector<unsigned long>());
+      }
 
       try{
         std::cout << "Init constants" << std::endl;
@@ -458,7 +469,7 @@ void Optimal::Run(void)
 
       std::cout << "Done" << std::endl;
 
-      cplex.writeSolution(outputSolPath.c_str());
+      // cplex.writeSolution(outputSolPath.c_str());
 
 
 
@@ -471,7 +482,7 @@ void Optimal::Run(void)
       IloNumArray c_sol(env);
       cplex.getValues(c_sol, c);
       std::cout << "Nb max version: " << nbMaxVersion << std::endl;
-      std::vector<unsigned> offeredVersion;
+      std::vector<unsigned long> offeredVersion;
       for (unsigned r = 0; r < nbVersion; ++r)
       {
         if (c_sol[r] > 0.5)
@@ -500,11 +511,13 @@ void Optimal::Run(void)
               std::cout << "u " << u << " visible bit-rate: " << v_b[u][r] << std::endl;
               m_pav->HeatSelectedVersion(r);
               optiVisibleB.push_back(v_b[u][r]);
+              m_selectedSegPerUserPerSegment[u].push_back(r);
             }
           }
           std::cout << "-------" << std::endl;
         }
       }
+      m_generatedVersionPerSegment.push_back(offeredVersion);
       std::uniform_int_distribution<unsigned int> dist(0, offeredVersion.size()-1);
       for (unsigned u = 0; u < nbUser; ++u)
       {
@@ -513,6 +526,7 @@ void Optimal::Run(void)
         auto startPosition = psi_vid->GetSegments()[u]->GetStartPosition();
         Float minDist = 100;
         unsigned rMin = nbVersion;
+        std::vector<double> qualityPerVersion;
         for (auto r: offeredVersion)
         {
           auto dist = m_pav->GetAllowedVersionVector()[r].Distance(startPosition);
@@ -521,8 +535,10 @@ void Optimal::Run(void)
             minDist = dist;
             rMin = r;
           }
+          qualityPerVersion.push_back(v_b[u][r]);
           // std::cout << "r " << r << " dist " << dist  << " start " << startPosition << std::endl;
         }
+        m_qualityPerUserPerSegment[u].push_back(qualityPerVersion);
         // std::cout << "heuristic: " << rMin << " dist " << minDist << " -> "<< v_b[u][rMin] << std::endl;
         heuristicVisibleB.push_back(v_b[u][rMin]);
       }
@@ -586,4 +602,87 @@ void Optimal::Run(void)
   m_pav->WritePosHeatMap(outputDir+"/pos_results.txt");
   m_pav->WriteDimHeatMap(outputDir+"/dim_results.txt");
 
+  // ofs = std::ofstream(outputDir+"/allowedVersion.txt");
+  // ofs << "vid theta phi hDim vDim Sqer\n";
+  // std::cout << "allowedVersion " <<  m_pav->GetAllowedVersionVector().size() << std::endl;
+  // unsigned long r = 0;
+  // for (auto const& version: m_pav->GetAllowedVersionVector())
+  // {
+  //   ofs << r << " " << version.GetTheta() << " " << version.GetPhi() << " " << version.GetHDim()
+  //       << " " << version.GetVDim() << " " << version.GetSize() << std::endl;
+  //   ++r;
+  // }
+
+  ofs = std::ofstream(outputDir+"/allowedVersion.bin", std::ios::out | std::ios::binary | std::ios::app);
+  unsigned long r = 0;
+  unsigned long nbAllowedVersion = m_pav->GetAllowedVersionVector().size();
+  ofs.write(reinterpret_cast<const char*>(&nbAllowedVersion), sizeof(nbAllowedVersion));
+  for (auto const& version: m_pav->GetAllowedVersionVector())
+  {
+    ofs.write(reinterpret_cast<const char*>(&r), sizeof(r));
+    float theta = version.GetTheta();
+    float phi = version.GetPhi();
+    float hDim = version.GetHDim();
+    float vDim = version.GetVDim();
+    float sQer = version.GetSize();
+
+    ofs.write(reinterpret_cast<const char*>(&theta), sizeof(theta));
+    ofs.write(reinterpret_cast<const char*>(&phi), sizeof(phi));
+    ofs.write(reinterpret_cast<const char*>(&hDim), sizeof(hDim));
+    ofs.write(reinterpret_cast<const char*>(&vDim), sizeof(vDim));
+    ofs.write(reinterpret_cast<const char*>(&sQer), sizeof(sQer));
+    ++r;
+  }
+
+  ofs = std::ofstream(outputDir+"/generatedVersion.bin", std::ios::out | std::ios::binary | std::ios::app);
+  // ofs << "segId nbVersion [versionId ...]\n";
+  unsigned long nbSegment = m_generatedVersionPerSegment.size();
+  ofs.write(reinterpret_cast<const char*>(&nbSegment), sizeof(nbSegment));
+  for (unsigned long segId = 0; segId < m_generatedVersionPerSegment.size(); ++segId)
+  {
+    ofs.write(reinterpret_cast<const char*>(&segId), sizeof(segId));
+    unsigned long nbVersion = m_generatedVersionPerSegment[segId].size();
+    ofs.write(reinterpret_cast<const char*>(&nbVersion), sizeof(nbVersion));
+    for (unsigned long rId: m_generatedVersionPerSegment[segId])
+    {
+      ofs.write(reinterpret_cast<const char*>(&rId), sizeof(rId));
+    }
+  }
+
+  // ofs = std::ofstream(outputDir+"/userVersionQuality.txt");
+  // ofs << "uid segId optiVersion nbVersion [versionId versionQuality ...]\n";
+  // for (unsigned int uid = 0; uid < m_qualityPerUserPerSegment.size(); ++uid)
+  // {
+  //   for (unsigned int segId = 0; segId < m_qualityPerUserPerSegment[uid].size(); ++segId)
+  //   {
+  //     ofs << uid << " " << segId << " " << m_selectedSegPerUserPerSegment[uid][segId] << " " << m_qualityPerUserPerSegment[uid][segId].size();
+  //     for (auto index = 0; index <  m_qualityPerUserPerSegment[uid][segId].size(); ++index)
+  //     {
+  //       ofs << " " << m_generatedVersionPerSegment[segId][index] << " " << m_qualityPerUserPerSegment[uid][segId][index];
+  //     }
+  //     ofs << "\n";
+  //   }
+  // }
+
+  ofs = std::ofstream(outputDir+"/userVersionQuality.bin", std::ios::out | std::ios::binary | std::ios::app);
+  unsigned long nbUser = m_qualityPerUserPerSegment.size();
+  ofs.write(reinterpret_cast<const char*>(&nbUser), sizeof(nbUser));
+  for (unsigned long uid = 0; uid < m_qualityPerUserPerSegment.size(); ++uid)
+  {
+    ofs.write(reinterpret_cast<const char*>(&uid), sizeof(uid));
+    unsigned long nbSegId = m_qualityPerUserPerSegment[uid].size();
+    ofs.write(reinterpret_cast<const char*>(&nbSegId), sizeof(nbSegId));
+    for (unsigned long segId = 0; segId < m_qualityPerUserPerSegment[uid].size(); ++segId)
+    {
+      ofs.write(reinterpret_cast<const char*>(&segId), sizeof(segId));
+      ofs.write(reinterpret_cast<const char*>(&m_selectedSegPerUserPerSegment[uid][segId]), sizeof(m_selectedSegPerUserPerSegment[uid][segId]));
+      unsigned long nbVersion = m_qualityPerUserPerSegment[uid][segId].size();
+      ofs.write(reinterpret_cast<const char*>(&nbVersion), sizeof(nbVersion));
+      for (auto index = 0; index <  m_qualityPerUserPerSegment[uid][segId].size(); ++index)
+      {
+        ofs.write(reinterpret_cast<const char*>(&m_generatedVersionPerSegment[segId][index]), sizeof(m_generatedVersionPerSegment[segId][index]));
+        ofs.write(reinterpret_cast<const char*>(&m_qualityPerUserPerSegment[uid][segId][index]), sizeof(m_qualityPerUserPerSegment[uid][segId][index]));
+      }
+    }
+  }
 }

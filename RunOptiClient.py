@@ -71,7 +71,10 @@ pathToOutputDir={output}
 
 
             outputFiles = dict()
-            for fileName in ['results.txt', 'results_avg.txt', 'pos_results.txt', 'dim_results.txt', 'results_raw_size.txt', 'results_raw.txt']:
+            for fileName in ['results.txt', 'results_avg.txt', 'pos_results.txt',
+                             'dim_results.txt', 'results_raw_size.txt',
+                             'results_raw.txt', 'allowedVersion.bin',
+                             'generatedVersion.bin', 'userVersionQuality.bin']:
                 filePath = os.path.join(relOutputDir, fileName)
                 if os.path.exists(filePath):
                     f = ''
