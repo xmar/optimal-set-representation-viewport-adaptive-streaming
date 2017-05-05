@@ -78,6 +78,8 @@ public:
    }
    return std::move(vidIdVect);
  }
+
+ void ComputeAverageVisionAndStoreIt(std::string outputPath, const AreaSet& areaSet) const;
 private:
   std::vector<std::shared_ptr<Segment>> m_segments;
 };

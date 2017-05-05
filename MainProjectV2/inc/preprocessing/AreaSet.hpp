@@ -50,24 +50,31 @@ public:
 
   bool Intersection(const Quaternion& userPosition, double horizontalFoVAngle, double verticalFoVAngle) const
   {
-    auto y = std::sqrt(1-std::cos(horizontalFoVAngle));
-    auto z = std::sqrt(1-std::cos(verticalFoVAngle));
-    auto a = Vector(1, y, z);
-    auto b = Vector(1, y, -z);
-    auto c = Vector(1, -y, -z);
-    auto d = Vector(1, -y, z);
-    // compute inward normal to the delimitation plan
-    auto n_ab = a ^ b;
-    n_ab = n_ab/n_ab.Norm();
-    auto n_bc = b ^ c;
-    n_bc = n_bc/n_bc.Norm();
-    auto n_cd = c ^ d;
-    n_cd = n_cd/n_cd.Norm();
-    auto n_da = d ^ a;
-    n_da = n_da/n_da.Norm();
-    Vector refPixelPos = userPosition.Inv().Rotation( Vector::FromSpherical(m_theta, m_phi));
-    return refPixelPos * n_ab >= 0 && refPixelPos * n_bc >= 0 &&
-           refPixelPos * n_cd >= 0 && refPixelPos * n_da >= 0;
+    // auto y = std::sqrt(1-std::cos(horizontalFoVAngle));
+    // auto z = std::sqrt(1-std::cos(verticalFoVAngle));
+    // auto a = Vector(1, y, z);
+    // auto b = Vector(1, y, -z);
+    // auto c = Vector(1, -y, -z);
+    // auto d = Vector(1, -y, z);
+    // // compute inward normal to the delimitation plan
+    // auto n_ab = a ^ b;
+    // n_ab = n_ab/n_ab.Norm();
+    // auto n_bc = b ^ c;
+    // n_bc = n_bc/n_bc.Norm();
+    // auto n_cd = c ^ d;
+    // n_cd = n_cd/n_cd.Norm();
+    // auto n_da = d ^ a;
+    // n_da = n_da/n_da.Norm();
+    // Vector refPixelPos = userPosition.Inv().Rotation( Vector::FromSpherical(m_theta, m_phi));
+    // return refPixelPos * n_ab >= 0 && refPixelPos * n_bc >= 0 &&
+    //        refPixelPos * n_cd >= 0 && refPixelPos * n_da >= 0;
+    Vector areaCenterToHeadRef = userPosition.Inv().Rotation( Vector::FromSpherical(m_theta, m_phi));
+    Coord3dCart oxy(areaCenterToHeadRef.GetX(), areaCenterToHeadRef.GetY(), 0); oxy = oxy / norm(oxy);
+    Coord3dCart oxz(areaCenterToHeadRef.GetX(), 0, areaCenterToHeadRef.GetZ()); oxz = oxz / norm(oxz);
+    Coord3dCart ox(1, 0, 0);
+    auto hAngle = std::acos(ox * oxy);
+    auto vAngle = std::acos(oxy * oxz);
+    return (hAngle <= horizontalFoVAngle/2.0) && (vAngle < verticalFoVAngle / 2.0);
   }
 
   const auto& GetSurface(void) const {return m_surface;}

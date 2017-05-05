@@ -150,6 +150,7 @@ int main( int argc, const char* argv[] )
 
       auto psi = std::make_shared<PrecomputeSegmentsIntersections>();
       psi->Init(configArgs->pathToTraces, *areaSet, configArgs->viewportHAngle, configArgs->viewportVAngle, configArgs->segmentDuration, configArgs->inputVideoList);
+      // psi->ComputeAverageVisionAndStoreIt("test.txt" ,*areaSet);
       std::cout << "Number of segment: " << psi->GetSegments().size() << std::endl;
       std::cout << "Number of timestamps: " << psi->NbView() << std::endl;
 

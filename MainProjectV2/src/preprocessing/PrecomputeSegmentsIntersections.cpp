@@ -160,6 +160,7 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
 
     std::ifstream ifs(path);
     std::string line;
+    Quaternion fixedRot(0, Vector(0,0,1));
     while(std::getline(ifs, line))
     {
       unsigned int positionId(0);
@@ -181,12 +182,40 @@ void PSI::Init(std::string pathToLogFolder, const AreaSet& areaSet, double horiz
         // seg->SetStartPosition(RotationMatrixToQuaternion(rotMat));
         seg->SetStartPosition(position);
       }
-      seg->AddVisibility(areaSet.GetVisibility(position, horizontalFoVAngle, verticalFoVAngle));
+      seg->AddVisibility(areaSet.GetVisibility(fixedRot*position, horizontalFoVAngle, verticalFoVAngle));
       hasSomething = true;
     }
     if (hasSomething)
     {
       m_segments.emplace_back(std::move(seg));
     }
+  }
+}
+
+void PSI::ComputeAverageVisionAndStoreIt(std::string outputPath, const AreaSet& areaSet) const
+{
+  std::vector<double> stats(areaSet.GetAreas().size(), 0.0);
+  unsigned long total = 0;
+  for (auto const& s: m_segments)
+  {
+    total += s->GetVisibilityVect().size();
+  }
+  for (auto const& s: m_segments)
+  {
+    for (auto v: s->GetVisibilityVect())
+    {
+      for (unsigned areaId = 0; areaId < areaSet.GetAreas().size(); ++areaId)
+      {
+        stats[areaId] += double(v.at(areaId)) / total;
+      }
+    }
+
+  }
+  std::ofstream ofs(outputPath);
+  ofs << "theta phi genHeat selecHeat\n";
+  for (unsigned areaId = 0; areaId < areaSet.GetAreas().size(); ++areaId)
+  {
+    ofs << areaSet.GetAreas()[areaId].GetTheta() << " " << areaSet.GetAreas()[areaId].GetPhi()
+        << " " << stats[areaId] << " " << stats[areaId] << "\n";
   }
 }

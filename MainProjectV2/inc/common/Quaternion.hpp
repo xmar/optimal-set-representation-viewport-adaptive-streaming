@@ -6,6 +6,8 @@
 
 typedef  double SCALAR;
 
+constexpr SCALAR PI_Quat = 3.141592653589793238462643383279502884L;
+
 namespace IMT {
 class Vector
 {
@@ -88,8 +90,8 @@ public:
   	double t1 = std::sin(yaw * 0.5);
   	double t2 = std::cos(roll * 0.5);
   	double t3 = std::sin(roll * 0.5);
-  	double t4 = std::cos(pitch * 0.5);
-  	double t5 = std::sin(pitch * 0.5);
+  	double t4 = std::cos( (pitch - PI_Quat/2.0) * 0.5);
+  	double t5 = std::sin( (pitch - PI_Quat/2.0) * 0.5);
 
     return Quaternion(t0 * t2 * t4 + t1 * t3 * t5, Vector(t0 * t3 * t4 - t1 * t2 * t5,
                                                           t0 * t2 * t5 + t1 * t3 * t4,
