@@ -86,7 +86,7 @@ class MasterQueue:
         for filePath in outputFiles:
             if not os.path.exists(os.path.dirname(filePath)):
                 os.makedirs(os.path.dirname(filePath))
-            with open(filePath, 'w') as o:
+            with open(filePath, 'wb') as o:
                 o.write(outputFiles[filePath])
         return
 

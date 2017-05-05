@@ -76,12 +76,18 @@ pathToOutputDir={output}
                              'results_raw.txt', 'allowedVersion.bin',
                              'generatedVersion.bin', 'userVersionQuality.bin']:
                 filePath = os.path.join(relOutputDir, fileName)
+                print ('Start to send file', fileName, '...')
                 if os.path.exists(filePath):
-                    f = ''
-                    with open(filePath, 'r') as i:
-                        for line in i:
-                            f += line
+                    f = b''
+                    with open(filePath, 'rb') as i:
+                        byte = i.read()
+                        while byte:
+                            f += byte
+                            byte = i.read()
                     outputFiles[filePath] = f
+                    print (' done')
+                else:
+                    print (' file doesn\'t exist')
 
             for f in glob.glob(os.path.join(relOutputDir, '*.sol')):
                 os.remove(f)

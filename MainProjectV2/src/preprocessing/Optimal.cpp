@@ -202,6 +202,7 @@ void Optimal::Run(void)
   std::vector<std::vector<unsigned long>> m_generatedVersionPerSegment;
   std::vector<std::vector<std::vector<double>>> m_qualityPerUserPerSegment;
   std::vector<std::vector<unsigned long>> m_selectedSegPerUserPerSegment;
+  std::vector<unsigned long> m_userToUserId;
 
   //Start processing loop
   for(auto videoId: m_psi->GetVideoIdVect())
@@ -270,6 +271,12 @@ void Optimal::Run(void)
         unsigned u = 0;
         for (auto const& s: psi_vid->GetSegments())
         {
+          char c1, c2, c3;
+          std::string tmp2;
+          unsigned long uid;
+          std::stringstream ss(s->GetUserId());
+          ss >> c1 >> c2 >> c3 >> uid >> tmp2;
+          m_userToUserId.push_back(uid);
           for (auto const& visibility: s->GetVisibilityVect())
           {
             for (unsigned a = 0; a < nbArea; ++a)
@@ -669,7 +676,7 @@ void Optimal::Run(void)
   ofs.write(reinterpret_cast<const char*>(&nbUser), sizeof(nbUser));
   for (unsigned long uid = 0; uid < m_qualityPerUserPerSegment.size(); ++uid)
   {
-    ofs.write(reinterpret_cast<const char*>(&uid), sizeof(uid));
+    ofs.write(reinterpret_cast<const char*>(&m_userToUserId[uid]), sizeof(m_userToUserId[uid]));
     unsigned long nbSegId = m_qualityPerUserPerSegment[uid].size();
     ofs.write(reinterpret_cast<const char*>(&nbSegId), sizeof(nbSegId));
     for (unsigned long segId = 0; segId < m_qualityPerUserPerSegment[uid].size(); ++segId)
